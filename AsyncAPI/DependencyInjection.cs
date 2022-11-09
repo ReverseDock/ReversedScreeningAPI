@@ -10,8 +10,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddAsyncAPI(
             this IServiceCollection services)
         {
-            services.AddScoped<ResultConsumer>();
-            services.AddSingleton<ResultConsumerWrapper>();
+            services.AddSingleton<ResultConsumer>();
             services.AddSingleton<IAdvancedBus>((sp) =>
             {
                 var _bus = RabbitHutch.CreateBus("host=rabbitmq;prefetchcount=1").Advanced;
@@ -19,11 +18,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 var exchange = _bus.ExchangeDeclare("e.dockings", "direct");
                 var binding = _bus.Bind(exchange, queue, "Result");
 
-                var consumerWrapper = sp.GetService<ResultConsumerWrapper>()!;
-
-                _bus.Consume<Models.Result>(queue, async (msg, info) => {
-                    await consumerWrapper._resultConsumer.Consume(msg, info);
-                });
+                var resultConsumer = sp.GetService<ResultConsumer>()!;
+                _bus.Consume<Models.Result>(queue, resultConsumer.Consume);
                 
                 return _bus;
             });
