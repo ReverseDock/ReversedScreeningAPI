@@ -1,8 +1,8 @@
 namespace Models;
 
-public class Result
+public record Result
 {
-    public int submission;
-    public int ligand;
-    public float affinity;
+    public int submission { get; init; }
+    public int ligand { get; init; }
+    public float affinity { get; init; }
 };

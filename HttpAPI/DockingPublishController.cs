@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using System;
-using EasyNetQ;
 using Models;
+using AsyncAPI.Publishers;
 
-using System.Text;
 namespace HttpAPI;
 
 [ApiController]
@@ -12,27 +10,20 @@ public class DockingPublishController : ControllerBase
 {
 
     private readonly ILogger<DockingPublishController> _logger;
-    private readonly IAdvancedBus _bus;
+    private readonly IDockingPublisher _dockingPublisher;
 
     public DockingPublishController(ILogger<DockingPublishController> logger,
-                                    IAdvancedBus bus)
+                                    IDockingPublisher dockingPublisher)
     {
         _logger = logger;
-        _bus = bus;
+        _dockingPublisher = dockingPublisher;
     }
 
     [HttpGet(Name = "PublishDockingTest")]
     public async Task<ActionResult> PublishDockingTest() 
     {
-        var dockings = new Docking { Text = "Gday m8" };
-        var message = new Message<Docking>(dockings);
-        var routingKey = "Docking";
-
-        var queue = await _bus.QueueDeclareAsync("q.dockings", true, false, false);
-        var exchange = await _bus.ExchangeDeclareAsync("e.dockings", "direct");
-        var binding = await _bus.BindAsync(exchange, queue, routingKey);
-
-        await _bus.PublishAsync(exchange, routingKey, true, message);
+        var docking = new Docking { Text = "lol" };
+        await _dockingPublisher.PublishDocking(docking);
         return Ok();
     }
 }

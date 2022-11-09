@@ -1,5 +1,6 @@
 namespace Models;
 
-public class Docking {
-    public string Text = "";
+public record Docking
+{
+    public string Text { get; init; }
 }

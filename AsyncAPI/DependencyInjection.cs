@@ -1,7 +1,6 @@
-using Microsoft.Extensions.Configuration;
 using AsyncAPI.Consumers;
-using AsyncAPI;
-using EasyNetQ;
+using AsyncAPI.Publishers;
+using MassTransit;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -10,21 +9,18 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddAsyncAPI(
             this IServiceCollection services)
         {
-            services.AddSingleton<ResultConsumer>();
-            services.AddSingleton<IAdvancedBus>((sp) =>
+            services.AddMassTransit(x =>
             {
-                var _bus = RabbitHutch.CreateBus("host=rabbitmq;prefetchcount=1").Advanced;
-                var queue = _bus.QueueDeclare("q.dockings.results", true, false, false);
-                var exchange = _bus.ExchangeDeclare("e.dockings", "direct");
-                var binding = _bus.Bind(exchange, queue, "Result");
+                x.AddConsumer<ResultConsumer>();
 
-                var resultConsumer = sp.GetService<ResultConsumer>()!;
-                _bus.Consume<Models.Result>(queue, resultConsumer.Consume);
-                
-                return _bus;
+                x.UsingRabbitMq((ctx, cfg) =>
+                {
+                    cfg.Host("rabbitmq", "/");
+                    cfg.ConfigureEndpoints(ctx);
+                });
             });
-
-
+            services.AddScoped<IDockingPublisher, DockingPublisher>();
+            
             return services;
         }
     }

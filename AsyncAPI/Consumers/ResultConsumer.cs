@@ -1,24 +1,13 @@
-using EasyNetQ;
-using EasyNetQ.Consumer;
+using MassTransit;
 using Models;
 
 namespace AsyncAPI.Consumers;
 
-public class ResultConsumer
+public class ResultConsumer : IConsumer<Result>
 {
-    public ResultConsumer()
-    {
-        Console.WriteLine("Created instance of ResultConsumer");
-    }
-
-    public async Task Consume(IMessage<Result> msg, MessageReceivedInfo info)
+    public async Task Consume(ConsumeContext<Result> context)
     {
         await Task.CompletedTask;
-        Console.WriteLine($"got message with affinity {msg.Body.affinity}");
-    }
-
-    ~ResultConsumer()
-    {
-        Console.WriteLine("Deleting instance of ResultConsumer");
+        Console.WriteLine($"Affinity received: {context.Message.affinity}");
     }
 }
