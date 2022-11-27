@@ -1,9 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
-using Models;
+
+using AsyncAPI.Models;
 using AsyncAPI.Publishers;
+
 using DataAccess.Repositories;
 
-namespace HttpAPI;
+using HttpAPI.Models;
+
+namespace HttpAPI.Controllers;
 
 [ApiController]
 [Route("Dockings")]
@@ -12,11 +16,11 @@ public class DockingPublishController : ControllerBase
 
     private readonly ILogger<DockingPublishController> _logger;
     private readonly IDockingPublisher _dockingPublisher;
-    private readonly ISubmissionRepository _submissionRepository;
+    private readonly IRepository<Submission> _submissionRepository;
 
     public DockingPublishController(ILogger<DockingPublishController> logger,
                                     IDockingPublisher dockingPublisher,
-                                    ISubmissionRepository submissionRepository)
+                                    IRepository<Submission> submissionRepository)
     {
         _logger = logger;
         _dockingPublisher = dockingPublisher;
@@ -34,7 +38,7 @@ public class DockingPublishController : ControllerBase
     [HttpPost(Name = "TestMongoDBAccess")]
     public async Task<ActionResult> TestMongoDBAccess()
     {
-        await _submissionRepository.CreateAsync(new Submission { path = "lol"} );
+        await _submissionRepository.CreateAsync(new Submission { path = "lol" } );
         var result = await _submissionRepository.GetAsync();
         return Ok(result);
     }

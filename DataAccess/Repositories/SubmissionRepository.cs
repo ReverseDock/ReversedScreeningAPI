@@ -1,10 +1,9 @@
+using HttpAPI.Models;
 using MongoDB.Driver;
-using Models;
-using Microsoft.Extensions.Configuration;
 
 namespace DataAccess.Repositories;
 
-public class SubmissionRepository : ISubmissionRepository
+public class SubmissionRepository : IRepository<Submission>
 {
     private readonly IMongoCollection<Submission> _submissionCollection;
 
@@ -31,11 +30,14 @@ public class SubmissionRepository : ISubmissionRepository
 
     public async Task CreateAsync(Submission submission) 
     {
+        submission.createdAt = new DateTime();
+        submission.updatedAt = new DateTime();
         await _submissionCollection.InsertOneAsync(submission);
     }
 
     public async Task UpdateAsync(string id, Submission updatedSubmission)
     {
+        updatedSubmission.updatedAt = new DateTime();
         await _submissionCollection.ReplaceOneAsync(x => x.id == id, updatedSubmission);
     }
     

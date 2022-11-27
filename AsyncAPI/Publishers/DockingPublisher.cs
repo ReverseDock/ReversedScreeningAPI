@@ -1,5 +1,6 @@
+using AsyncAPI.Models;
+
 using MassTransit;
-using Models;
 
 namespace AsyncAPI.Publishers;
 

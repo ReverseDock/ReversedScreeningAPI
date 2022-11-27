@@ -1,4 +1,4 @@
-using Models;
+using AsyncAPI.Models;
 
 namespace AsyncAPI.Publishers;
 

@@ -1,5 +1,7 @@
 using DataAccess.Repositories;
 
+using HttpAPI.Models;
+
 using MongoDB.Driver;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -17,7 +19,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 return new MongoClient(connectionString);
             });
 
-            services.AddSingleton<ISubmissionRepository, SubmissionRepository>();
+            services.AddSingleton<IRepository<Submission>, SubmissionRepository>();
+            services.AddSingleton<IRepository<UserFile>, UserFileRepository>();
 
             return services;
         }

@@ -1,4 +1,4 @@
-namespace Models;
+namespace AsyncAPI.Models;
 
 public record Docking
 {

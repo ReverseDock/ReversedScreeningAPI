@@ -1,5 +1,6 @@
 using AsyncAPI.Consumers;
 using AsyncAPI.Publishers;
+
 using MassTransit;
 
 namespace Microsoft.Extensions.DependencyInjection
