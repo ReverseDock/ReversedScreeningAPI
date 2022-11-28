@@ -4,7 +4,7 @@ using MongoDB.Driver;
 
 namespace DataAccess.Repositories;
 
-public class UserFileRepository : IRepository<UserFile>
+public class UserFileRepository : IUserFileRepository
 {
     private readonly IMongoCollection<UserFile> _UserFileCollection;
 
@@ -19,6 +19,11 @@ public class UserFileRepository : IRepository<UserFile>
         _UserFileCollection = mongoDatabase.GetCollection<UserFile>(collectionName);
     }
 
+    public async Task<UserFile?> GetByGuid(Guid guid)
+    {
+        return await _UserFileCollection.Find(x => x.guid == guid).FirstOrDefaultAsync();
+    }
+    
     public async Task<List<UserFile>> GetAsync()
     {
         return await _UserFileCollection.Find(_ => true).ToListAsync();

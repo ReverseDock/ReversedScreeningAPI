@@ -8,44 +8,44 @@ using HttpAPI.Services;
 namespace HttpAPI.Controllers;
 
 [ApiController]
-[Route("Submissions")]
+[Route("submissions")]
 public class SubmissionController : ControllerBase
 {
-    private readonly ILogger<DockingPublishController> _logger;
-    private readonly IRepository<Submission> _submissionRepository;
+    private readonly ILogger<SubmissionController> _logger;
     private readonly IUserFileService _userFileService;
+    private readonly ISubmissionService _submissionService;
 
-    public SubmissionController(ILogger<DockingPublishController> logger,
-                                IRepository<Submission> submissionRepository,
-                                IUserFileService userFileService)
+    public SubmissionController(ILogger<SubmissionController> logger,
+                                IUserFileService userFileService,
+                                ISubmissionService submissionService)
     {
         _logger = logger;
-        _submissionRepository = submissionRepository;
         _userFileService = userFileService;
+        _submissionService = submissionService;
     }
 
-    [HttpPost(Name = "PostSubmission")]
-    public async Task<ActionResult> PostSubmission(IFormFile formFile) 
+    [HttpPost]
+    public async Task<ActionResult> CreateSubmission(Guid fileGuid, string emailAddress)
     {
-        if (formFile.Length == 0) return BadRequest();
-        var result = await _userFileService.CreateFile(formFile);
-        if (!result) return BadRequest();
+        var userIP = Request.HttpContext.Connection.RemoteIpAddress;
+        var guid = await _submissionService.CreateSubmission(fileGuid, emailAddress, userIP!.ToString());
+        return Ok(guid);
+    }
+
+    [HttpPost]
+    [Route("{submissionGuid}/confirm")]
+    public async Task<ActionResult> ConfirmSubmission(Guid submissionGuid)
+    {
+        await _submissionService.ConfirmSubmission(submissionGuid);
+        await _submissionService.CreateDockings(submissionGuid);
         return Ok();
     }
 
-    [HttpGet(Name = "GetFiles")]
-    public async Task<ActionResult> GetFiles()
-    {
-        var result = await _userFileService.GetFiles();
-        return Ok(result);
-    }
-
-    [Route("{fileId}")]
     [HttpGet]
-    public async Task<IActionResult> GetFile(string fileId)
+    [Route("{submissionGuid}")]
+    public async Task<ActionResult> GetResults(Guid submissionGuid)
     {
-        var fileStream = await _userFileService.GetFile(fileId);
-        if (fileStream is null) return NotFound();
-        return File(fileStream, "application/octet-stream");
+        var results = await _submissionService.GetResults(submissionGuid);
+        return Ok(results);
     }
 }

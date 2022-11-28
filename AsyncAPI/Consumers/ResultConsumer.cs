@@ -1,14 +1,32 @@
 using AsyncAPI.Models;
 
+using DataAccess.Repositories;
+
+using HttpAPI.Models;
+
 using MassTransit;
 
 namespace AsyncAPI.Consumers;
 
-public class ResultConsumer : IConsumer<Result>
+public class ResultConsumer : IConsumer<AsyncAPI.Models.Result>
 {
-    public async Task Consume(ConsumeContext<Result> context)
+    private readonly IResultRepository _resultsRepository;
+
+    public ResultConsumer(IResultRepository resultRepository)
     {
-        await Task.CompletedTask;
-        Console.WriteLine($"Affinity received: {context.Message.affinity}");
+        _resultsRepository = resultRepository;
+    }
+
+    public async Task Consume(ConsumeContext<AsyncAPI.Models.Result> context)
+    {
+        var model = context.Message;
+        var dbResult = new HttpAPI.Models.Result
+        {
+            submissionId = model.submission,
+            receptorId = model.receptor,
+            affinity = model.affinity,
+            fullOutputPath = model.fullOutputPath
+        };
+        await _resultsRepository.CreateAsync(dbResult);
     }
 }

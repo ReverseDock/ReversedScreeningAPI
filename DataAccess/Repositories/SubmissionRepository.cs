@@ -3,7 +3,7 @@ using MongoDB.Driver;
 
 namespace DataAccess.Repositories;
 
-public class SubmissionRepository : IRepository<Submission>
+public class SubmissionRepository : ISubmissionRepository
 {
     private readonly IMongoCollection<Submission> _submissionCollection;
 
@@ -16,6 +16,11 @@ public class SubmissionRepository : IRepository<Submission>
         var collectionName = configuration.GetSection("MongoDB")["SubmissionsCollectionName"];
         var mongoDatabase = mongoClient.GetDatabase(databaseName);
         _submissionCollection = mongoDatabase.GetCollection<Submission>(collectionName);
+    }
+
+    public async Task<Submission?> GetByGuid(Guid guid)
+    {
+        return await _submissionCollection.Find(x => x.guid == guid).FirstOrDefaultAsync();
     }
 
     public async Task<List<Submission>> GetAsync()

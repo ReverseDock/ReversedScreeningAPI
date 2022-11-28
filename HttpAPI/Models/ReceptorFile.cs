@@ -3,12 +3,12 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace HttpAPI.Models;
 
-public class UserFile
+public class ReceptorFile
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? id { get; set; }
-    public Guid guid { get; set; }
+    public int group { get; set; }
     public string fullPath { get; set; } = null!;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;

@@ -10,7 +10,8 @@ namespace Microsoft.Extensions.DependencyInjection
     {
          public static IServiceCollection AddDataAccess(
             this IServiceCollection services,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            bool IsDevelopment)
         {
             var connectionString = configuration.GetSection("MongoDB")["ConnectionString"];
 
@@ -19,8 +20,10 @@ namespace Microsoft.Extensions.DependencyInjection
                 return new MongoClient(connectionString);
             });
 
-            services.AddSingleton<IRepository<Submission>, SubmissionRepository>();
-            services.AddSingleton<IRepository<UserFile>, UserFileRepository>();
+            services.AddSingleton<ISubmissionRepository, SubmissionRepository>();
+            services.AddSingleton<IUserFileRepository, UserFileRepository>();
+            services.AddSingleton<IRepository<ReceptorFile>, ReceptorFileRepository>();
+            services.AddSingleton<IResultRepository, ResultRepository>();
 
             return services;
         }
