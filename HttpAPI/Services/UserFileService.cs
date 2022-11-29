@@ -37,7 +37,8 @@ class UserFileService : IUserFileService
 
             await _fileRepository.CreateAsync(new UserFile {
                 fullPath = fullPath,
-                guid = guid
+                guid = guid,
+                FASTA = Guid.NewGuid().ToString()
             });
 
             return guid;

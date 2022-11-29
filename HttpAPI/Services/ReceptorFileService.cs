@@ -35,7 +35,8 @@ class ReceptorFileService : IReceptorFileService
 
             await _fileRepository.CreateAsync(new ReceptorFile {
                 fullPath = fullPath,
-                group = group
+                group = group,
+                FASTA = Guid.NewGuid().ToString()
             });
             return true;
         }

@@ -1,4 +1,5 @@
 using HttpAPI.Models;
+using HttpAPI.Models.DTO;
 using AsyncAPI.Models;
 
 using DataAccess.Repositories;
@@ -74,10 +75,12 @@ public class SubmissionService : ISubmissionService
         return guid;
     }
 
-    public async Task<List<Models.Result>> GetResults(Guid submissionGuid)
+    public async Task<List<ResultDTO>> GetResults(Guid submissionGuid)
     {
         var submission = await _submissionRepository.GetByGuid(submissionGuid);
         if (submission is null) throw new FileNotFoundException();
-        return await _resultRepository.GetBySubmissionId(submission.id!);
+        var results = await _resultRepository.GetDTOAsync(submission.id!);
+
+        return results;
     }
 }

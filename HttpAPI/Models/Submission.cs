@@ -9,6 +9,7 @@ public class Submission
     [BsonRepresentation(BsonType.ObjectId)]
     public string? id { get; set; }
     public Guid guid { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
     public string? fileId = null;
     public string emailAddress = null!;
     public string IP = null!;
