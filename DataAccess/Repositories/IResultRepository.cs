@@ -3,9 +3,9 @@ using HttpAPI.Models.DTO;
 
 namespace DataAccess.Repositories;
 
-public interface IResultRepository : IRepository<Result>
+public interface IDockingResultRepository : IRepository<DockingResult>
 {
-    public Task<List<Result>> GetBySubmissionId(string submissionId);
+    public Task<List<DockingResult>> GetBySubmissionId(string submissionId);
 
-    public Task<List<ResultDTO>> GetDTOAsync(string submissionId);
+    public Task<List<DockingResultDTO>> GetDTOAsync(string submissionId);
 }

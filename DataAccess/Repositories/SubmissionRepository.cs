@@ -33,11 +33,12 @@ public class SubmissionRepository : ISubmissionRepository
         return await _submissionCollection.Find(x => x.id == id).FirstOrDefaultAsync();
     }
 
-    public async Task CreateAsync(Submission submission) 
+    public async Task<Submission> CreateAsync(Submission submission) 
     {
         submission.createdAt = new DateTime();
         submission.updatedAt = new DateTime();
         await _submissionCollection.InsertOneAsync(submission);
+        return submission;
     }
 
     public async Task UpdateAsync(string id, Submission updatedSubmission)

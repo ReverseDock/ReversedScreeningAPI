@@ -34,11 +34,12 @@ public class UserFileRepository : IUserFileRepository
         return await _UserFileCollection.Find(x => x.id == id).FirstOrDefaultAsync();
     }
 
-    public async Task CreateAsync(UserFile UserFile) 
+    public async Task<UserFile> CreateAsync(UserFile UserFile) 
     {
         UserFile.createdAt = new DateTime();
         UserFile.updatedAt = new DateTime();
         await _UserFileCollection.InsertOneAsync(UserFile);
+        return UserFile;
     }
 
     public async Task UpdateAsync(string id, UserFile updatedUserFile)

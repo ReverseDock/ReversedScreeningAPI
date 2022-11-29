@@ -8,11 +8,13 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IUserFileService, UserFileService>();
 builder.Services.AddScoped<IReceptorFileService, ReceptorFileService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+builder.Services.AddScoped<IFASTAService, FASTAService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddDataAccess(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.AddMongoDB(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.AddRedis(builder.Configuration);
 builder.Services.AddAsyncAPI(builder.Configuration);
 
 

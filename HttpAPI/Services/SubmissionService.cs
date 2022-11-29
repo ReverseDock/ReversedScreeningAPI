@@ -13,12 +13,12 @@ public class SubmissionService : ISubmissionService
     private readonly ISubmissionRepository _submissionRepository;
     private readonly IUserFileRepository _userFileRepository;
     private readonly IReceptorFileService _receptorFileService;
-    private readonly IDockingPublisher _dockingPublisher;
-    private readonly IResultRepository _resultRepository;
+    private readonly IDockingTaskPublisher _dockingPublisher;
+    private readonly IDockingResultRepository _resultRepository;
     
     public SubmissionService(ILogger<SubmissionService> logger, ISubmissionRepository submissionRepository,
-                             IUserFileRepository userFileRepository, IDockingPublisher dockingPublisher,
-                             IReceptorFileService receptorFileService, IResultRepository resultRepository)
+                             IUserFileRepository userFileRepository, IDockingTaskPublisher dockingPublisher,
+                             IReceptorFileService receptorFileService, IDockingResultRepository resultRepository)
     {
         _logger = logger;
         _submissionRepository = submissionRepository;
@@ -47,14 +47,14 @@ public class SubmissionService : ISubmissionService
         var receptors = await _receptorFileService.GetFiles();
         foreach (var receptor in receptors)
         {
-            var docking = new Docking
+            var docking = new DockingTask
             {
                 submissionId = submission.id!,
                 receptorId = receptor.id!,
                 fullLigandPath = userFile.fullPath,
                 fullReceptorPath = receptor.fullPath
             };
-            await _dockingPublisher.PublishDocking(docking);
+            await _dockingPublisher.PublishDockingTask(docking);
         }
     }
 
@@ -75,7 +75,7 @@ public class SubmissionService : ISubmissionService
         return guid;
     }
 
-    public async Task<List<ResultDTO>> GetResults(Guid submissionGuid)
+    public async Task<List<DockingResultDTO>> GetResults(Guid submissionGuid)
     {
         var submission = await _submissionRepository.GetByGuid(submissionGuid);
         if (submission is null) throw new FileNotFoundException();

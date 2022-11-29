@@ -4,19 +4,19 @@ using MassTransit;
 
 namespace AsyncAPI.Publishers;
 
-public class DockingPublisher : IDockingPublisher, IDisposable
+public class DockingTaskPublisher : IDockingTaskPublisher, IDisposable
 {
     IPublishEndpoint _publishEndpoint;
 
-    public DockingPublisher(IPublishEndpoint publishEndpoint)
+    public DockingTaskPublisher(IPublishEndpoint publishEndpoint)
     {
         _publishEndpoint = publishEndpoint;
         Console.WriteLine("Created docking publisher");
     }
 
-    public async Task PublishDocking(Docking docking)
+    public async Task PublishDockingTask(DockingTask docking)
     {
-        await _publishEndpoint.Publish<Docking>(docking);
+        await _publishEndpoint.Publish<DockingTask>(docking);
     }
 
     public void Dispose() {}

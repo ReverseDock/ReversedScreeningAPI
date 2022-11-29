@@ -17,7 +17,7 @@ class ReceptorFileService : IReceptorFileService
         _fileRepository = fileRepository;
     }
 
-    public async Task<bool> CreateFile(IFormFile formFile, int group)
+    public async Task<ReceptorFile?> CreateFile(IFormFile formFile, int group)
     {
         try
         {
@@ -33,17 +33,18 @@ class ReceptorFileService : IReceptorFileService
                 file.CopyTo(stream);
             }
 
-            await _fileRepository.CreateAsync(new ReceptorFile {
+            var receptorFile = await _fileRepository.CreateAsync(new ReceptorFile {
                 fullPath = fullPath,
                 group = group,
-                FASTA = Guid.NewGuid().ToString()
+                FASTA = ""
             });
-            return true;
-        }
+
+            return receptorFile;
+        }   
         catch (Exception ex)
         {
             _logger.LogError($"Error when creating receptor file: {ex}");
-            return false;
+            return null;
         }
     }
 

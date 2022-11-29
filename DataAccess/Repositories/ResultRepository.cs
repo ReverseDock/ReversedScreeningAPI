@@ -6,22 +6,22 @@ using MongoDB.Bson;
 
 namespace DataAccess.Repositories;
 
-public class ResultRepository : IResultRepository
+public class DockingResultRepository : IDockingResultRepository
 {
-    private readonly IMongoCollection<Result> _ResultCollection;
+    private readonly IMongoCollection<DockingResult> _DockingResultCollection;
     private readonly IMongoCollection<UserFile> _UserFileCollection;
     private readonly IMongoCollection<ReceptorFile> _ReceptorFileCollection;
     private readonly IMongoCollection<Submission> _SubmissionCollection;
 
-    public ResultRepository(
+    public DockingResultRepository(
         IMongoClient mongoClient,
         IConfiguration configuration
     )
     {
         var databaseName = configuration.GetSection("MongoDB")["DatabaseName"];
-        var collectionName = configuration.GetSection("MongoDB")["ResultsCollectionName"];
+        var collectionName = configuration.GetSection("MongoDB")["DockingResultsCollectionName"];
         var mongoDatabase = mongoClient.GetDatabase(databaseName);
-        _ResultCollection = mongoDatabase.GetCollection<Result>(collectionName);
+        _DockingResultCollection = mongoDatabase.GetCollection<DockingResult>(collectionName);
 
         var userFileCollectionName = configuration.GetSection("MongoDB")["UserFilesCollectionName"];
         _UserFileCollection = mongoDatabase.GetCollection<UserFile>(userFileCollectionName);
@@ -33,60 +33,61 @@ public class ResultRepository : IResultRepository
         _SubmissionCollection = mongoDatabase.GetCollection<Submission>(submissionCollectionName);
     }
 
-    public async Task<List<Result>> GetAsync()
+    public async Task<List<DockingResult>> GetAsync()
     {
-        return await _ResultCollection.Find(_ => true).ToListAsync();
+        return await _DockingResultCollection.Find(_ => true).ToListAsync();
     }
 
-    public async Task<List<ResultDTO>> GetDTOAsync(string submissionId)
+    public async Task<List<DockingResultDTO>> GetDTOAsync(string submissionId)
     {
-        var results = await _ResultCollection.Aggregate()
-            .Match<Result>(x => x.submissionId == submissionId)
-            .Project<Result, ResultReceptorAffinityProjection>(x =>
-                new ResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity })
-            .Lookup<ResultReceptorAffinityProjection, ReceptorFile, ResultReceptorAffinityReceptorsProjection>(
+        var DockingResults = await _DockingResultCollection.Aggregate()
+            .Match<DockingResult>(x => x.submissionId == submissionId)
+            .Project<DockingResult, DockingResultReceptorAffinityProjection>(x =>
+                new DockingResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity })
+            .Lookup<DockingResultReceptorAffinityProjection, ReceptorFile, DockingResultReceptorAffinityReceptorsProjection>(
                 _ReceptorFileCollection, x => x.receptorId, y => y.id, z => z.receptors)
-            .Project<ResultReceptorAffinityReceptorsProjection, ResultDTO>(x =>
-                new ResultDTO { receptorFASTA = x.receptors.First().FASTA, affinity = x.affinity })
-            .ToListAsync<ResultDTO>();
-        return results;
+            .Project<DockingResultReceptorAffinityReceptorsProjection, DockingResultDTO>(x =>
+                new DockingResultDTO { receptorFASTA = x.receptors.First().FASTA, affinity = x.affinity })
+            .ToListAsync<DockingResultDTO>();
+        return DockingResults;
     }
 
-    public async Task<Result?> GetAsync(string id)
+    public async Task<DockingResult?> GetAsync(string id)
     {
-        return await _ResultCollection.Find(x => x.id == id).FirstOrDefaultAsync();
+        return await _DockingResultCollection.Find(x => x.id == id).FirstOrDefaultAsync();
     }
 
-    public async Task<List<Result>> GetBySubmissionId(string submissionId)
+    public async Task<List<DockingResult>> GetBySubmissionId(string submissionId)
     {
-        return await _ResultCollection.Find(x => x.submissionId == submissionId).ToListAsync();
+        return await _DockingResultCollection.Find(x => x.submissionId == submissionId).ToListAsync();
     }
 
-    public async Task CreateAsync(Result Result) 
+    public async Task<DockingResult> CreateAsync(DockingResult DockingResult) 
     {
-        Result.createdAt = new DateTime();
-        Result.updatedAt = new DateTime();
-        await _ResultCollection.InsertOneAsync(Result);
+        DockingResult.createdAt = new DateTime();
+        DockingResult.updatedAt = new DateTime();
+        await _DockingResultCollection.InsertOneAsync(DockingResult);
+        return DockingResult;
     }
 
-    public async Task UpdateAsync(string id, Result updatedResult)
+    public async Task UpdateAsync(string id, DockingResult updatedDockingResult)
     {
-        updatedResult.updatedAt = new DateTime();
-        await _ResultCollection.ReplaceOneAsync(x => x.id == id, updatedResult);
+        updatedDockingResult.updatedAt = new DateTime();
+        await _DockingResultCollection.ReplaceOneAsync(x => x.id == id, updatedDockingResult);
     }
     
     public async Task RemoveAsync(string id)
     {
-        await _ResultCollection.DeleteOneAsync(x => x.id == id);
+        await _DockingResultCollection.DeleteOneAsync(x => x.id == id);
     }
 
-    private class ResultReceptorAffinityProjection
+    private class DockingResultReceptorAffinityProjection
     {
         public string receptorId { get; init; } = null!;
         public float affinity { get; init; }
     };
 
-    private class ResultReceptorAffinityReceptorsProjection
+    private class DockingResultReceptorAffinityReceptorsProjection
     {
         public string receptorId { get; init; } = null!;
         public float affinity { get; init; }

@@ -1,6 +1,6 @@
 namespace AsyncAPI.Models;
 
-public record Docking
+public record DockingTask
 {
     public string submissionId { get; init; } = null!;
 

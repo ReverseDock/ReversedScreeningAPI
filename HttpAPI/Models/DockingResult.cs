@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace HttpAPI.Models;
 
-public class Result
+public class DockingResult
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]

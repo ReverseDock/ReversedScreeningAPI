@@ -14,7 +14,8 @@ namespace Microsoft.Extensions.DependencyInjection
             var host = configuration.GetSection("RabbitMQ")["Host"];
             services.AddMassTransit(x =>
             {
-                x.AddConsumer<ResultConsumer>();
+                x.AddConsumer<DockingResultConsumer>();
+                x.AddConsumer<FASTAResultConsumer>();
 
                 x.UsingRabbitMq((ctx, cfg) =>
                 {
@@ -22,7 +23,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     cfg.ConfigureEndpoints(ctx);
                 });
             });
-            services.AddTransient<IDockingPublisher, DockingPublisher>();
+            services.AddTransient<IDockingTaskPublisher, DockingTaskPublisher>();
+            services.AddTransient<IFASTATaskPublisher, FASTATaskPublisher>();
             
             return services;
         }

@@ -13,12 +13,15 @@ public class AdminController : ControllerBase
 {
     private readonly ILogger<AdminController> _logger;
     private readonly IReceptorFileService _receptorFileService;
+    private readonly IFASTAService _FASTAService;
 
     public AdminController(ILogger<AdminController> logger,
-                           IReceptorFileService receptorFileService)
+                           IReceptorFileService receptorFileService,
+                           IFASTAService FASTAService)
     {
         _logger = logger;
         _receptorFileService = receptorFileService;
+        _FASTAService = FASTAService;
     }
 
     [HttpPost]
@@ -27,7 +30,8 @@ public class AdminController : ControllerBase
     {
         if (formFile.Length == 0) return BadRequest();
         var result = await _receptorFileService.CreateFile(formFile, group);
-        if (!result) return BadRequest();
+        if (result is null) return BadRequest();
+        await _FASTAService.PublishFASTATask(result);
         return Ok();
     }
 

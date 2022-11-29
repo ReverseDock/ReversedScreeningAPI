@@ -29,11 +29,12 @@ public class ReceptorFileRepository : IRepository<ReceptorFile>
         return await _ReceptorFileCollection.Find(x => x.id == id).FirstOrDefaultAsync();
     }
 
-    public async Task CreateAsync(ReceptorFile ReceptorFile) 
+    public async Task<ReceptorFile> CreateAsync(ReceptorFile ReceptorFile) 
     {
         ReceptorFile.createdAt = new DateTime();
         ReceptorFile.updatedAt = new DateTime();
         await _ReceptorFileCollection.InsertOneAsync(ReceptorFile);
+        return ReceptorFile;
     }
 
     public async Task UpdateAsync(string id, ReceptorFile updatedReceptorFile)
