@@ -1,4 +1,4 @@
-using HttpAPI.Services;
+using Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +9,7 @@ builder.Services.AddScoped<IUserFileService, UserFileService>();
 builder.Services.AddScoped<IReceptorFileService, ReceptorFileService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IFASTAService, FASTAService>();
+builder.Services.AddScoped<IDockingPrepService, DockingPrepService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

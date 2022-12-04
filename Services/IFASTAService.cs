@@ -1,6 +1,6 @@
 using HttpAPI.Models;
 
-namespace HttpAPI.Services;
+namespace Services;
 
 public interface IFASTAService
 {

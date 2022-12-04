@@ -4,17 +4,20 @@ using DataAccess.Repositories;
 
 using HttpAPI.Models;
 
-namespace HttpAPI.Services;
+namespace Services;
 
 class ReceptorFileService : IReceptorFileService
 {
     private readonly ILogger<ReceptorFileService> _logger;
     private readonly IRepository<ReceptorFile> _fileRepository;
+    private readonly IConfiguration _configuration;
     
-    public ReceptorFileService(ILogger<ReceptorFileService> logger, IRepository<ReceptorFile> fileRepository)
+    public ReceptorFileService(ILogger<ReceptorFileService> logger, IRepository<ReceptorFile> fileRepository,
+                               IConfiguration configuration)
     {
         _logger = logger;
         _fileRepository = fileRepository;
+        _configuration = configuration;
     }
 
     public async Task<ReceptorFile?> CreateFile(IFormFile formFile, int group)
@@ -22,8 +25,7 @@ class ReceptorFileService : IReceptorFileService
         try
         {
             var file = formFile;
-            var folderName = Path.Combine("Receptors");
-            var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), folderName);
+            var pathToSave = Path.Combine(_configuration.GetSection("Storage")["Receptors"], group.ToString());
             Directory.CreateDirectory(pathToSave);
             
             var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName!.Trim('"');

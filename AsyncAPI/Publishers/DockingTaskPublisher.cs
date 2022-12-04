@@ -11,7 +11,6 @@ public class DockingTaskPublisher : IDockingTaskPublisher, IDisposable
     public DockingTaskPublisher(IPublishEndpoint publishEndpoint)
     {
         _publishEndpoint = publishEndpoint;
-        Console.WriteLine("Created docking publisher");
     }
 
     public async Task PublishDockingTask(DockingTask docking)

@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-using DataAccess.Repositories;
-
-using HttpAPI.Models;
-using HttpAPI.Services;
+using Services;
 
 namespace HttpAPI.Controllers;
 
@@ -14,14 +11,17 @@ public class FileController : ControllerBase
     private readonly ILogger<FileController> _logger;
     private readonly IUserFileService _userFileService;
     private readonly ISubmissionService _submissionService;
+    private readonly IFASTAService _FASTAService;
 
     public FileController(ILogger<FileController> logger,
                           IUserFileService userFileService,
-                          ISubmissionService submissionService)
+                          ISubmissionService submissionService,
+                          IFASTAService FASTAService)
     {
         _logger = logger;
         _userFileService = userFileService;
         _submissionService = submissionService;
+        _FASTAService = FASTAService;
     }
 
     [HttpPost]
@@ -30,7 +30,8 @@ public class FileController : ControllerBase
         if (formFile.Length == 0) return BadRequest();
         var result = await _userFileService.CreateFile(formFile);
         if (result is null) return BadRequest();
-        return Ok(result);
+        await _FASTAService.PublishFASTATask(null, result);
+        return Ok(result.guid);
     }
 
     [Route("{fileGuid}")]

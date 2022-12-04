@@ -16,15 +16,18 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 x.AddConsumer<DockingResultConsumer>();
                 x.AddConsumer<FASTAResultConsumer>();
+                x.AddConsumer<DockingPrepResultConsumer>();
 
                 x.UsingRabbitMq((ctx, cfg) =>
                 {
                     cfg.Host(host, "/");
                     cfg.ConfigureEndpoints(ctx);
+                    cfg.UseRawJsonSerializer();
                 });
             });
             services.AddTransient<IDockingTaskPublisher, DockingTaskPublisher>();
             services.AddTransient<IFASTATaskPublisher, FASTATaskPublisher>();
+            services.AddTransient<IDockingPrepTaskPublisher, DockingPrepTaskPublisher>();
             
             return services;
         }

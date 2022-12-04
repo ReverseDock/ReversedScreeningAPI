@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 
-using DataAccess.Repositories;
-
-using HttpAPI.Models;
-using HttpAPI.Services;
+using HttpAPI.Models.DTO;
+using Services;
 
 namespace HttpAPI.Controllers;
 
@@ -14,14 +12,17 @@ public class SubmissionController : ControllerBase
     private readonly ILogger<SubmissionController> _logger;
     private readonly IUserFileService _userFileService;
     private readonly ISubmissionService _submissionService;
+    private readonly IDockingPrepService _dockingPrepService;
 
     public SubmissionController(ILogger<SubmissionController> logger,
                                 IUserFileService userFileService,
-                                ISubmissionService submissionService)
+                                ISubmissionService submissionService,
+                                IDockingPrepService dockingPrepService)
     {
         _logger = logger;
         _userFileService = userFileService;
         _submissionService = submissionService;
+        _dockingPrepService = dockingPrepService;
     }
 
     [HttpPost]
@@ -37,7 +38,9 @@ public class SubmissionController : ControllerBase
     public async Task<ActionResult> ConfirmSubmission(Guid submissionGuid)
     {
         await _submissionService.ConfirmSubmission(submissionGuid);
-        await _submissionService.CreateDockings(submissionGuid);
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        var userFile = await _userFileService.GetFile(submission!.fileId!);
+        await _dockingPrepService.PrepareForDocking(null, userFile, submission);
         return Ok();
     }
 
@@ -45,7 +48,14 @@ public class SubmissionController : ControllerBase
     [Route("{submissionGuid}")]
     public async Task<ActionResult> GetResults(Guid submissionGuid)
     {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
         var results = await _submissionService.GetResults(submissionGuid);
-        return Ok(results);
+        var userFile = await _userFileService.GetFile(submission!.fileId!);
+        var dto = new SubmissionInfoDTO
+        {
+            ligandFASTA = userFile!.FASTA,
+            dockingResults = results
+        };
+        return Ok(dto);
     }
 }

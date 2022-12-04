@@ -4,7 +4,7 @@ using AsyncAPI.Publishers;
 using AsyncAPI.Models;
 using System.Text.Json;
 
-namespace HttpAPI.Services;
+namespace Services;
 
 public class FASTAService : IFASTAService
 {

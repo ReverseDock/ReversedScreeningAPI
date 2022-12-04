@@ -5,7 +5,10 @@ using AsyncAPI.Models;
 using DataAccess.Repositories;
 using AsyncAPI.Publishers;
 
-namespace HttpAPI.Services;
+using StackExchange.Redis;
+using System.Text.Json;
+
+namespace Services;
 
 public class SubmissionService : ISubmissionService
 {
@@ -15,10 +18,12 @@ public class SubmissionService : ISubmissionService
     private readonly IReceptorFileService _receptorFileService;
     private readonly IDockingTaskPublisher _dockingPublisher;
     private readonly IDockingResultRepository _resultRepository;
-    
+    private readonly IConnectionMultiplexer _redis;
+
     public SubmissionService(ILogger<SubmissionService> logger, ISubmissionRepository submissionRepository,
                              IUserFileRepository userFileRepository, IDockingTaskPublisher dockingPublisher,
-                             IReceptorFileService receptorFileService, IDockingResultRepository resultRepository)
+                             IReceptorFileService receptorFileService, IDockingResultRepository resultRepository,
+                             IConnectionMultiplexer redis)
     {
         _logger = logger;
         _submissionRepository = submissionRepository;
@@ -26,6 +31,7 @@ public class SubmissionService : ISubmissionService
         _dockingPublisher = dockingPublisher;
         _receptorFileService = receptorFileService;
         _resultRepository = resultRepository;
+        _redis = redis;
     }
 
     public async Task ConfirmSubmission(Guid submissionGuid)
@@ -37,9 +43,9 @@ public class SubmissionService : ISubmissionService
         await _submissionRepository.UpdateAsync(submission.id!, submission);
     }
 
-    public async Task CreateDockings(Guid submissionGuid)
+    public async Task CreateDockings(string submissionId)
     {
-        var submission = await _submissionRepository.GetByGuid(submissionGuid);
+        var submission = await _submissionRepository.GetAsync(submissionId);
         if (submission is null) throw new FileNotFoundException();
         var userFile = await _userFileRepository.GetAsync(submission.fileId!);
         if (userFile is null) throw new FileNotFoundException();
@@ -51,8 +57,9 @@ public class SubmissionService : ISubmissionService
             {
                 submissionId = submission.id!,
                 receptorId = receptor.id!,
-                fullLigandPath = userFile.fullPath,
-                fullReceptorPath = receptor.fullPath
+                fullLigandPath = userFile.fullPDBQTPath,
+                fullReceptorPath = receptor.fullPDBQTPath,
+                fullConfigPath = receptor.fullConfigPath
             };
             await _dockingPublisher.PublishDockingTask(docking);
         }
@@ -63,7 +70,7 @@ public class SubmissionService : ISubmissionService
         Guid guid = Guid.NewGuid();
         UserFile? userFile = await _userFileRepository.GetByGuid(fileGuid);
         if (userFile is null) throw new FileNotFoundException();
-        // Add verification that no submission exists
+        // Add verification that no submission exists for file id
 
         await _submissionRepository.CreateAsync(new Submission {
             guid = guid,
@@ -82,5 +89,13 @@ public class SubmissionService : ISubmissionService
         var results = await _resultRepository.GetDTOAsync(submission.id!);
 
         return results;
+    }
+
+    public async Task<Submission?> GetSubmission(Guid submissionGuid)
+    {
+        var submission = await _submissionRepository.GetByGuid(submissionGuid);
+        if (submission is null) throw new FileNotFoundException();
+
+        return submission;
     }
 }

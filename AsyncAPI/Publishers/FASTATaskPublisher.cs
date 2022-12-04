@@ -11,7 +11,6 @@ public class FASTATaskPublisher : IFASTATaskPublisher, IDisposable
     public FASTATaskPublisher(IPublishEndpoint publishEndpoint)
     {
         _publishEndpoint = publishEndpoint;
-        Console.WriteLine("Created FASTA publisher");
     }
 
     public async Task PublishFASTATask(FASTATask FASTA)

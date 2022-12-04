@@ -4,27 +4,29 @@ using DataAccess.Repositories;
 
 using HttpAPI.Models;
 
-namespace HttpAPI.Services;
+namespace Services;
 
 class UserFileService : IUserFileService
 {
     private readonly ILogger<UserFileService> _logger;
     private readonly IUserFileRepository _fileRepository;
+    private readonly IConfiguration _configuration;
     
-    public UserFileService(ILogger<UserFileService> logger, IUserFileRepository fileRepository)
+    public UserFileService(ILogger<UserFileService> logger, IUserFileRepository fileRepository,
+                           IConfiguration configuarion)
     {
         _logger = logger;
         _fileRepository = fileRepository;
+        _configuration = configuarion;
     }
 
-    public async Task<Guid?> CreateFile(IFormFile formFile)
+    public async Task<UserFile?> CreateFile(IFormFile formFile)
     {
         try
         {
             var guid = Guid.NewGuid();
             var file = formFile;
-            var folderName = Path.Combine("UserFiles");
-            var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), folderName);
+            var pathToSave = Path.Combine(_configuration.GetSection("Storage")["UserFiles"], guid.ToString());
             Directory.CreateDirectory(pathToSave);
             
             var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName!.Trim('"');
@@ -35,13 +37,13 @@ class UserFileService : IUserFileService
                 file.CopyTo(stream);
             }
 
-            await _fileRepository.CreateAsync(new UserFile {
+            var result = await _fileRepository.CreateAsync(new UserFile {
                 fullPath = fullPath,
                 guid = guid,
-                FASTA = Guid.NewGuid().ToString()
+                FASTA = ""
             });
 
-            return guid;
+            return result;
         }
         catch (Exception ex)
         {
@@ -64,5 +66,10 @@ class UserFileService : IUserFileService
         var fileStream = new FileStream(fileObject.fullPath, FileMode.Open);
         
         return fileStream;
+    }
+
+    public async Task<UserFile?> GetFile(string id)
+    {
+        return await _fileRepository.GetAsync(id);
     }
 }
