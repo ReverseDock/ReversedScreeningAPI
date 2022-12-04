@@ -12,16 +12,19 @@ public class FileController : ControllerBase
     private readonly IUserFileService _userFileService;
     private readonly ISubmissionService _submissionService;
     private readonly IFASTAService _FASTAService;
+    private readonly IPDBFixService _PDBFixService;
 
     public FileController(ILogger<FileController> logger,
                           IUserFileService userFileService,
                           ISubmissionService submissionService,
-                          IFASTAService FASTAService)
+                          IFASTAService FASTAService,
+                          IPDBFixService PDBFixService)
     {
         _logger = logger;
         _userFileService = userFileService;
         _submissionService = submissionService;
         _FASTAService = FASTAService;
+        _PDBFixService = PDBFixService;
     }
 
     [HttpPost]
@@ -31,6 +34,7 @@ public class FileController : ControllerBase
         var result = await _userFileService.CreateFile(formFile);
         if (result is null) return BadRequest();
         await _FASTAService.PublishFASTATask(null, result);
+        await _PDBFixService.PublishPDBFixTask(result);
         return Ok(result.guid);
     }
 

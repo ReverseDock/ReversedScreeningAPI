@@ -41,7 +41,7 @@ public class DockingPrepService : IDockingPrepService
         var task = new DockingPrepTask
         {
             id = guid,
-            fullPath = receptor == null ? userFile!.fullPath : receptor!.fullPath,
+            fullPath = receptor == null ? userFile!.fullFixedPath : receptor!.fullPath,
             type = receptor == null ? EDockingPrepPeptideType.Ligand : EDockingPrepPeptideType.Receptor
         };
 

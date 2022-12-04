@@ -10,6 +10,7 @@ builder.Services.AddScoped<IReceptorFileService, ReceptorFileService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IFASTAService, FASTAService>();
 builder.Services.AddScoped<IDockingPrepService, DockingPrepService>();
+builder.Services.AddScoped<IPDBFixService, PDBFixService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
