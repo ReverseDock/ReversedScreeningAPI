@@ -18,9 +18,14 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddMongoDB(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddRedis(builder.Configuration);
 builder.Services.AddAsyncAPI(builder.Configuration);
+builder.Services.AddCors(c => {
+    c.AddPolicy("AllowAnything", options => options.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed((host) => true));
+});
 
 
 var app = builder.Build();
+
+app.UseCors("AllowAnything");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

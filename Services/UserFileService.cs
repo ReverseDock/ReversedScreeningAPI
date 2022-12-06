@@ -59,7 +59,7 @@ class UserFileService : IUserFileService
 
     public async Task<FileStream?> GetFile(Guid guid)
     {
-         var fileObject = await _fileRepository.GetByGuid(guid);
+        var fileObject = await _fileRepository.GetByGuid(guid);
 
         if (fileObject == null) return null;
 
@@ -71,5 +71,10 @@ class UserFileService : IUserFileService
     public async Task<UserFile?> GetFile(string id)
     {
         return await _fileRepository.GetAsync(id);
+    }
+
+    public async Task<UserFile?> GetFileByGuid(Guid guid)
+    {
+        return await _fileRepository.GetByGuid(guid);
     }
 }

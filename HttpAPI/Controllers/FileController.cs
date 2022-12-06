@@ -42,8 +42,41 @@ public class FileController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetFile(Guid fileGuid)
     {
+        var userFile = await _userFileService.GetFileByGuid(fileGuid);
+        if (userFile is null) return NotFound();
         var fileStream = await _userFileService.GetFile(fileGuid);
         if (fileStream is null) return NotFound();
-        return File(fileStream, "application/octet-stream");
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(userFile.fullPath));
+    }
+
+    [Route("{fileGuid}/fix/file")]
+    [HttpGet]
+    public async Task<IActionResult> GetFixedFile(Guid fileGuid)
+    {
+        var userFile = await _userFileService.GetFileByGuid(fileGuid);
+        if (userFile is null) return NotFound();
+        var fileStream = await _PDBFixService.GetFixedFile(userFile);
+        if (fileStream is null) return NotFound();
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(userFile.fullFixedPath));
+    }
+
+    [Route("{fileGuid}/fix/results")]
+    [HttpGet]
+    public async Task<IActionResult> GetFixedResults(Guid fileGuid)
+    {
+        var userFile = await _userFileService.GetFileByGuid(fileGuid);
+        if (userFile is null) return NotFound();
+        return Ok(userFile.fixedJSONResult);
+    }
+
+    [Route("{fileGuid}/fix/status")]
+    [HttpGet]
+    public async Task<IActionResult> GetFixStatus(Guid fileGuid)
+    {
+        var userFile = await _userFileService.GetFileByGuid(fileGuid);
+        if (userFile is null) return NotFound();
+        var status = await _PDBFixService.CheckPDBFixStatus(userFile);
+        if (status) return Ok();
+        return Conflict();
     }
 }

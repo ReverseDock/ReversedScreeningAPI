@@ -18,17 +18,20 @@ public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
 {
     private readonly IUserFileRepository _userFileRepository;
     private readonly IRepository<ReceptorFile> _receptorFileRepository;
+    private readonly ISubmissionRepository _submissionRepository;
     private readonly IConnectionMultiplexer _redis;
     private readonly ISubmissionService _submissionService;
 
     public DockingPrepResultConsumer(IUserFileRepository userFileRepository,
                                      IRepository<ReceptorFile> receptorFileRepository,
-                                     IConnectionMultiplexer redis, ISubmissionService submissionService)
+                                     IConnectionMultiplexer redis, ISubmissionService submissionService,
+                                     ISubmissionRepository submissionRepository)
     {
         _userFileRepository = userFileRepository;
         _receptorFileRepository = receptorFileRepository;
         _redis = redis;
         _submissionService = submissionService;
+        _submissionRepository = submissionRepository;
     }
 
     public async Task Consume(ConsumeContext<DockingPrepResult> context)
@@ -41,6 +44,14 @@ public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
     
         DockingPrepTaskInfo? taskInfo = JsonSerializer.Deserialize<DockingPrepTaskInfo>(taskInfoRaw.ToString());
         if (taskInfo is null) throw new FileNotFoundException();
+
+        if (model.fullPath is null)
+        {
+            var submission = await _submissionRepository.GetAsync(taskInfo.submissionId!);
+            submission!.failed = true;
+            await _submissionRepository.UpdateAsync(taskInfo.submissionId!, submission);
+            return;
+        }
 
         if (taskInfo.type == EDockingPrepPeptideType.Receptor)
         {

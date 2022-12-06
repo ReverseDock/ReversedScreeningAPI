@@ -25,7 +25,8 @@ public class DockingResultConsumer : IConsumer<AsyncAPI.Models.DockingResult>
             submissionId = model.submission,
             receptorId = model.receptor,
             affinity = model.affinity,
-            fullOutputPath = model.fullOutputPath
+            fullOutputPath = model.fullOutputPath,
+            secondsToCompletion = model.secondsToCompletion
         };
         await _DockingResultsRepository.CreateAsync(dbDockingResult);
     }

@@ -26,7 +26,7 @@ public class SubmissionController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult> CreateSubmission(Guid fileGuid, string emailAddress)
+    public async Task<ActionResult> CreateSubmission([FromForm] Guid fileGuid, [FromForm] string emailAddress)
     {
         var userIP = Request.HttpContext.Connection.RemoteIpAddress;
         var guid = await _submissionService.CreateSubmission(fileGuid, emailAddress, userIP!.ToString());

@@ -13,6 +13,7 @@ public class Submission
     public string? fileId = null;
     public string emailAddress = null!;
     public string IP = null!;
+    public bool failed = false;
     public bool confirmed = false;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;

@@ -6,4 +6,5 @@ public record DockingResult
     public string receptor { get; init; } = null!;
     public float affinity { get; init; }
     public string fullOutputPath { get; init; } = null!;
+    public int secondsToCompletion { get; init; }
 };

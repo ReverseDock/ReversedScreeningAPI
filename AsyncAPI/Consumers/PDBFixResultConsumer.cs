@@ -40,6 +40,7 @@ public class PDBFixResultConsumer : IConsumer<PDBFixResult>
 
         var userFile = await _userFileRepository.GetAsync(taskInfo.userFileId!);
         userFile!.fullFixedPath = model.fullPath;
+        userFile!.fixedJSONResult = model.JSONResult;
         await _userFileRepository.UpdateAsync(taskInfo.userFileId!, userFile!);
     }
 }

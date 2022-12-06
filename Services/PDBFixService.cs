@@ -51,4 +51,16 @@ class PDBFixService : IPDBFixService
 
         await _taskPublisher.PublishPDBFixTask(task);
     }
+
+    public async Task<bool> CheckPDBFixStatus(UserFile userFile)
+    {
+        return userFile.fullFixedPath != null;
+    }
+
+    public async Task<FileStream?> GetFixedFile(UserFile userFile)
+    {
+        if (userFile.fullFixedPath == null) return null;
+        var fileStream = new FileStream(userFile.fullFixedPath, FileMode.Open);
+        return fileStream;
+    }
 }

@@ -14,6 +14,7 @@ public class DockingResult
     public string receptorId { get; init; } = null!;
     public float affinity { get; init; }
     public string fullOutputPath { get; init; } = null!;
+    public int secondsToCompletion { get; init; }
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
 };
