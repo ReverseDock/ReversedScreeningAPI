@@ -22,13 +22,14 @@ public class Submission
     [BsonRepresentation(BsonType.ObjectId)]
     public string? pdbqtFileId = null;
     public string FASTA { get; set; } = null!;
-    public SubmissionStatus status { get; set; }
+    public SubmissionStatus status { get; set; } = SubmissionStatus.Incomplete;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
 }
 
 public enum SubmissionStatus
 {
+    Incomplete,
     ConfirmationPending,
     Confirmed,
     PreparationFailed,

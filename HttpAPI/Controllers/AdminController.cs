@@ -13,18 +13,21 @@ public class AdminController : ControllerBase
     private readonly IFASTAService _FASTAService;
     private readonly IFileService _fileService;
     private readonly IDockingPrepService _dockingPrepService;
+    private readonly ISubmissionService _submissionService;
 
     public AdminController(ILogger<AdminController> logger,
                            IReceptorService receptorService,
                            IFASTAService FASTAService,
                            IDockingPrepService dockingPrepService,
-                           IFileService fileService)
+                           IFileService fileService,
+                           ISubmissionService submissionService)
     {
         _logger = logger;
         _receptorService = receptorService;
         _FASTAService = FASTAService;
         _dockingPrepService = dockingPrepService;
         _fileService = fileService;
+        _submissionService = submissionService;
     }
 
     [HttpPost]
@@ -44,6 +47,14 @@ public class AdminController : ControllerBase
     public async Task<ActionResult> GetReceptors()
     {
         var result = await _receptorService.GetReceptors();
+        return Ok(result);
+    }
+
+    [HttpGet]
+    [Route("submissions")]
+    public async Task<ActionResult> GetSubmissions()
+    {
+        var result = await _submissionService.GetSubmissions();
         return Ok(result);
     }
 

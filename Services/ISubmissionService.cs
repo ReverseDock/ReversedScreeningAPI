@@ -14,4 +14,5 @@ public interface ISubmissionService
     public Task<FileDescriptor?> GetResultFile(Guid submissionGuid, Guid resultGuid);
     public Task<DockingResult?> GetResult(Guid submissionGuid, Guid resultGuid);
     public Task<IEnumerable<string>> GetUniProtIdsFromSubmission(string submissionId);
+    public Task<List<Submission>> GetSubmissions();
 }

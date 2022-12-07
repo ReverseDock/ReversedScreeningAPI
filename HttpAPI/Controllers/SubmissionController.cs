@@ -16,12 +16,14 @@ public class SubmissionController : ControllerBase
     private readonly IReceptorService _receptorService;
     private readonly IFASTAService _fastaService;
     private readonly IFileService _fileService;
+    private readonly IConfiguration _configuration;
 
     public SubmissionController(ILogger<SubmissionController> logger,
                                 ISubmissionService submissionService,
                                 IDockingPrepService dockingPrepService,
                                 IFileService fileService, IPDBFixService pdbFixService,
-                                IFASTAService fastaService, IReceptorService receptorService)
+                                IFASTAService fastaService, IReceptorService receptorService,
+                                IConfiguration configuration)
     {
         _logger = logger;
         _submissionService = submissionService;
@@ -30,6 +32,7 @@ public class SubmissionController : ControllerBase
         _pdbFixService = pdbFixService;
         _fastaService = fastaService;
         _receptorService = receptorService;
+        _configuration = configuration;
     }
 
     [HttpPost]
@@ -48,8 +51,11 @@ public class SubmissionController : ControllerBase
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
         if (submission is null) return NotFound();
+        if (submission.status >= Models.SubmissionStatus.Confirmed) return BadRequest("Can't change receptors, submission already confirmed.");
         await _submissionService.AddReceptors(submissionGuid, receptorsFile);
         var uniProtIds = await _submissionService.GetUniProtIdsFromSubmission(submission!.id!);
+        var maxReceptors = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorAmount"]);
+        if (uniProtIds.Count() > maxReceptors) return BadRequest($"Too many UniProtId's provided. Limit is {maxReceptors}.");
         var receptorsDTO = await _receptorService.GetReceptorStatusDTOs(uniProtIds);
         return Ok(receptorsDTO);
     }

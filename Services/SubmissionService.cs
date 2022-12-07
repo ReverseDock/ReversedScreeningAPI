@@ -42,7 +42,7 @@ public class SubmissionService : ISubmissionService
         var submission = await _submissionRepository.GetByGuid(submissionGuid);
         if (submission is null) throw new FileNotFoundException();
         if (submission.confirmationGuid == confirmationGuid
-            && submission.status != SubmissionStatus.ConfirmationPending)
+            && submission.status == SubmissionStatus.ConfirmationPending)
             submission.status = SubmissionStatus.Confirmed;
         else
             return;
@@ -73,6 +73,8 @@ public class SubmissionService : ISubmissionService
             };
             await _dockingPublisher.PublishDockingTask(docking);
         }
+        submission.status = SubmissionStatus.InProgress;
+        await _submissionRepository.UpdateAsync(submission.id!, submission);
     }
 
     public async Task<Submission> CreateSubmission(IFormFile ligandFile, string ipAddress)
@@ -102,6 +104,7 @@ public class SubmissionService : ISubmissionService
             var fileDescriptor = await _fileService.CreateFile(file, "receptorlists", false);
             
             submission!.receptorListFileId = fileDescriptor!.id;
+            submission!.status = SubmissionStatus.ConfirmationPending;
             await _submissionRepository.UpdateAsync(submission.id!, submission!);
 
             return;
@@ -151,5 +154,10 @@ public class SubmissionService : ISubmissionService
         var file = await _fileService.GetFile(submission!.receptorListFileId!);
         var uniProtIds = await File.ReadAllLinesAsync(file!.path);
         return uniProtIds;
+    }
+
+    public async Task<List<Submission>> GetSubmissions()
+    {
+        return await _submissionRepository.GetAsync();
     }
 }
