@@ -5,8 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddScoped<IUserFileService, UserFileService>();
-builder.Services.AddScoped<IReceptorFileService, ReceptorFileService>();
+builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IReceptorService, ReceptorService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IFASTAService, FASTAService>();
 builder.Services.AddScoped<IDockingPrepService, DockingPrepService>();

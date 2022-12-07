@@ -14,17 +14,17 @@ namespace AsyncAPI.Consumers;
 
 public class FASTAResultConsumer : IConsumer<FASTAResult>
 {
-    private readonly IUserFileRepository _userFileRepository;
-    private readonly IReceptorFileRepository _receptorFileRepository;
+    private readonly ISubmissionRepository _submissionRepository;
+    private readonly IReceptorRepository _receptorRepository;
     private readonly IConnectionMultiplexer _redis;
     private readonly IConfiguration _configuration;
 
-    public FASTAResultConsumer(IUserFileRepository userFileRepository,
-                               IReceptorFileRepository receptorFileRepository,
+    public FASTAResultConsumer(ISubmissionRepository submissionRepository,
+                               IReceptorRepository receptorRepository,
                                IConnectionMultiplexer redis, IConfiguration configuration)
     {
-        _userFileRepository = userFileRepository;
-        _receptorFileRepository = receptorFileRepository;
+        _submissionRepository = submissionRepository;
+        _receptorRepository = receptorRepository;
         _redis = redis;
         _configuration = configuration;
     }
@@ -42,17 +42,17 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
 
         if (taskInfo.type == FASTATaskType.Receptor)
         {
-            var receptor = await _receptorFileRepository.GetAsync(taskInfo.receptorId!);
+            var receptor = await _receptorRepository.GetAsync(taskInfo.receptorId!);
             receptor!.FASTA = model.FASTA;
             var maxSize = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorSize"]);
             if (model.FASTA.Length > maxSize) receptor!.status = ReceptorFileStatus.TooBig;
-            await _receptorFileRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
+            await _receptorRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
         }
-        else if (taskInfo.type == FASTATaskType.UserFile)
+        else if (taskInfo.type == FASTATaskType.Ligand)
         {
-            var userFile = await _userFileRepository.GetAsync(taskInfo.userFileId!);
-            userFile!.FASTA = model.FASTA;
-            await _userFileRepository.UpdateAsync(taskInfo.userFileId!, userFile!);
+            var submission = await _submissionRepository.GetAsync(taskInfo.submissionId!);
+            submission!.FASTA = model.FASTA;
+            await _submissionRepository.UpdateAsync(taskInfo.submissionId!, submission!);
         }
     }
 }

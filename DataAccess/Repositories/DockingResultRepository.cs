@@ -9,8 +9,8 @@ namespace DataAccess.Repositories;
 public class DockingResultRepository : IDockingResultRepository
 {
     private readonly IMongoCollection<DockingResult> _DockingResultCollection;
-    private readonly IMongoCollection<UserFile> _UserFileCollection;
-    private readonly IMongoCollection<ReceptorFile> _ReceptorFileCollection;
+    private readonly IMongoCollection<FileDescriptor> _FileCollection;
+    private readonly IMongoCollection<Receptor> _ReceptorCollection;
     private readonly IMongoCollection<Submission> _SubmissionCollection;
 
     public DockingResultRepository(
@@ -23,11 +23,11 @@ public class DockingResultRepository : IDockingResultRepository
         var mongoDatabase = mongoClient.GetDatabase(databaseName);
         _DockingResultCollection = mongoDatabase.GetCollection<DockingResult>(collectionName);
 
-        var userFileCollectionName = configuration.GetSection("MongoDB")["UserFilesCollectionName"];
-        _UserFileCollection = mongoDatabase.GetCollection<UserFile>(userFileCollectionName);
+        var userFileCollectionName = configuration.GetSection("MongoDB")["FilesCollectionName"];
+        _FileCollection = mongoDatabase.GetCollection<FileDescriptor>(userFileCollectionName);
 
-        var receptorFileCollectionName = configuration.GetSection("MongoDB")["ReceptorFilesCollectionName"];
-        _ReceptorFileCollection = mongoDatabase.GetCollection<ReceptorFile>(receptorFileCollectionName);
+        var receptorFileCollectionName = configuration.GetSection("MongoDB")["ReceptorsCollectionName"];
+        _ReceptorCollection = mongoDatabase.GetCollection<Receptor>(receptorFileCollectionName);
 
         var submissionCollectionName = configuration.GetSection("MongoDB")["SubmissionsCollectionName"];
         _SubmissionCollection = mongoDatabase.GetCollection<Submission>(submissionCollectionName);
@@ -44,8 +44,8 @@ public class DockingResultRepository : IDockingResultRepository
             .Match<DockingResult>(x => x.submissionId == submissionId)
             .Project<DockingResult, DockingResultReceptorAffinityProjection>(x =>
                 new DockingResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity, guid = x.guid })
-            .Lookup<DockingResultReceptorAffinityProjection, ReceptorFile, DockingResultReceptorAffinityReceptorsProjection>(
-                _ReceptorFileCollection, x => x.receptorId, y => y.id, z => z.receptors)
+            .Lookup<DockingResultReceptorAffinityProjection, Receptor, DockingResultReceptorAffinityReceptorsProjection>(
+                _ReceptorCollection, x => x.receptorId, y => y.id, z => z.receptors)
             .Project<DockingResultReceptorAffinityReceptorsProjection, DockingResultDTO>(x =>
                 new DockingResultDTO { receptorFASTA = x.receptors.First().FASTA, UniProtId = x.receptors.First().UniProtID,
                                        guid = x.guid, affinity = x.affinity })
@@ -99,6 +99,6 @@ public class DockingResultRepository : IDockingResultRepository
         public string receptorId { get; init; } = null!;
         public float affinity { get; init; }
         public Guid guid { get; init; }
-        public IEnumerable<ReceptorFile> receptors;
+        public IEnumerable<Receptor> receptors;
     };
 }

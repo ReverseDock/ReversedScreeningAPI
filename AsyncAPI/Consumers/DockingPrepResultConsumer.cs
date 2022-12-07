@@ -16,22 +16,22 @@ namespace AsyncAPI.Consumers;
 
 public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
 {
-    private readonly IUserFileRepository _userFileRepository;
-    private readonly IReceptorFileRepository _receptorFileRepository;
+    private readonly IReceptorRepository _receptorRepository;
     private readonly ISubmissionRepository _submissionRepository;
     private readonly IConnectionMultiplexer _redis;
     private readonly ISubmissionService _submissionService;
+    private readonly IFileService _fileService;
 
-    public DockingPrepResultConsumer(IUserFileRepository userFileRepository,
-                                     IReceptorFileRepository receptorFileRepository,
+    public DockingPrepResultConsumer(IReceptorRepository receptorRepository,
                                      IConnectionMultiplexer redis, ISubmissionService submissionService,
-                                     ISubmissionRepository submissionRepository)
+                                     ISubmissionRepository submissionRepository,
+                                     IFileService fileService)
     {
-        _userFileRepository = userFileRepository;
-        _receptorFileRepository = receptorFileRepository;
+        _receptorRepository = receptorRepository;
         _redis = redis;
         _submissionService = submissionService;
         _submissionRepository = submissionRepository;
+        _fileService = fileService;
     }
 
     public async Task Consume(ConsumeContext<DockingPrepResult> context)
@@ -47,34 +47,41 @@ public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
 
         if (taskInfo.type == EDockingPrepPeptideType.Receptor)
         {
-            var receptor = await _receptorFileRepository.GetAsync(taskInfo.receptorId!);
-            if (model.fullPath is null)
+            var receptor = await _receptorRepository.GetAsync(taskInfo.receptorId!);
+            if (model.path is null)
             {
                 if (receptor!.status != ReceptorFileStatus.TooBig)
                     receptor!.status = ReceptorFileStatus.PDBQTError;
-                await _receptorFileRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
-                // leaves orphaned files!!
+                await _receptorRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
+                // Leaves orphaned files!
                 return;
             }
 
+            var pdbqtFile = await _fileService.CreateFile(model.path, false);
+            var configFile = await _fileService.CreateFile(model.configPath, false);
+
             receptor!.status = ReceptorFileStatus.Ready;
-            receptor!.fullPDBQTPath = model.fullPath;
-            receptor!.fullConfigPath = model.fullConfigPath;
-            await _receptorFileRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
+            receptor!.pdbqtFileId = pdbqtFile!.id;
+            receptor!.configFileId = configFile!.id;
+            await _receptorRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
         }
         else if (taskInfo.type == EDockingPrepPeptideType.Ligand)
         {
-            if (model.fullPath is null)
+            var submission = await _submissionRepository.GetAsync(taskInfo.submissionId!);
+            if (model.path is null)
             {
-                var submission = await _submissionRepository.GetAsync(taskInfo.submissionId!);
-                submission!.failed = true;
+                
+                submission!.status = SubmissionStatus.PreparationFailed;
                 await _submissionRepository.UpdateAsync(taskInfo.submissionId!, submission);
                 return;
             }
 
-            var userFile = await _userFileRepository.GetAsync(taskInfo.userFileId!);
-            userFile!.fullPDBQTPath = model.fullPath;
-            await _userFileRepository.UpdateAsync(taskInfo.userFileId!, userFile!);
+            var pdbqtFile = await _fileService.CreateFile(model.path, false);
+
+            submission!.status = SubmissionStatus.PreparationComplete;
+            submission!.pdbqtFileId = pdbqtFile!.id;
+
+            await _submissionRepository.UpdateAsync(taskInfo.submissionId!, submission);
             await _submissionService.CreateDockings(taskInfo.submissionId!);
         }
     }

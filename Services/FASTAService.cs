@@ -11,33 +11,60 @@ public class FASTAService : IFASTAService
     private readonly ILogger<FASTAService> _logger;
     private readonly IConnectionMultiplexer _redis;
     private readonly IFASTATaskPublisher _fastaTaskPublisher;
+    private readonly IFileService _fileService;
     
     public FASTAService(ILogger<FASTAService> logger, IConnectionMultiplexer redis,
-                        IFASTATaskPublisher fastaTaskPublisher)
+                        IFASTATaskPublisher fastaTaskPublisher, IFileService fileService)
     {
         _logger = logger;
         _redis = redis;
         _fastaTaskPublisher = fastaTaskPublisher;
+        _fileService = fileService;
     }
 
-    public async Task PublishFASTATask(ReceptorFile? receptor = null, UserFile? userFile = null)
+    public async Task PublishFASTATask(Receptor receptor)
     {
         var db = _redis.GetDatabase();
         var guid = Guid.NewGuid();
         var taskInfo = new FASTATaskInfo
         {
-            type = receptor == null ? FASTATaskType.UserFile : FASTATaskType.Receptor,
-            receptorId = receptor != null ? receptor.id : null,
-            userFileId = userFile != null ? userFile.id : null
+            type = FASTATaskType.Receptor,
+            receptorId = receptor.id
         };
 
         var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
         await db.StringSetAsync("FASTA:" + guid.ToString(), taskInfoJSON);
 
+        var file = await _fileService.GetFile(receptor.fileId!);
+
         var task = new FASTATask
         {
             id = guid,
-            fullPath = receptor == null ? userFile!.fullPath : receptor.fullPath
+            path = file!.path
+        };
+
+        await _fastaTaskPublisher.PublishFASTATask(task);
+    }
+
+    public async Task PublishFASTATask(Submission submission)
+    {
+        var db = _redis.GetDatabase();
+        var guid = Guid.NewGuid();
+        var taskInfo = new FASTATaskInfo
+        {
+            type = FASTATaskType.Ligand,
+            submissionId = submission.id!
+        };
+
+        var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
+        await db.StringSetAsync("FASTA:" + guid.ToString(), taskInfoJSON);
+
+        var file = await _fileService.GetFile(submission.fileId!);
+
+        var task = new FASTATask
+        {
+            id = guid,
+            path = file!.path
         };
 
         await _fastaTaskPublisher.PublishFASTATask(task);

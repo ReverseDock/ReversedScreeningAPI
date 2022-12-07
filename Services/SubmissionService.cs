@@ -15,34 +15,37 @@ public class SubmissionService : ISubmissionService
 {
     private readonly ILogger<SubmissionService> _logger;
     private readonly ISubmissionRepository _submissionRepository;
-    private readonly IUserFileRepository _userFileRepository;
-    private readonly IReceptorFileService _receptorFileService;
+    private readonly IReceptorService _receptorService;
     private readonly IDockingTaskPublisher _dockingPublisher;
     private readonly IDockingResultRepository _resultRepository;
+    private readonly IFileService _fileService;
     private readonly IConnectionMultiplexer _redis;
     private readonly IConfiguration _configuration;
 
     public SubmissionService(ILogger<SubmissionService> logger, ISubmissionRepository submissionRepository,
-                             IUserFileRepository userFileRepository, IDockingTaskPublisher dockingPublisher,
-                             IReceptorFileService receptorFileService, IDockingResultRepository resultRepository,
+                             IDockingTaskPublisher dockingPublisher, IFileService fileService,
+                             IReceptorService receptorService, IDockingResultRepository resultRepository,
                              IConnectionMultiplexer redis, IConfiguration configuration)
     {
         _logger = logger;
         _submissionRepository = submissionRepository;
-        _userFileRepository = userFileRepository;
         _dockingPublisher = dockingPublisher;
-        _receptorFileService = receptorFileService;
+        _fileService = fileService;
+        _receptorService = receptorService;
         _resultRepository = resultRepository;
         _redis = redis;
         _configuration = configuration;
     }
 
-    public async Task ConfirmSubmission(Guid submissionGuid)
+    public async Task ConfirmSubmission(Guid submissionGuid, Guid confirmationGuid)
     {
         var submission = await _submissionRepository.GetByGuid(submissionGuid);
         if (submission is null) throw new FileNotFoundException();
-
-        submission.confirmed = true;
+        if (submission.confirmationGuid == confirmationGuid
+            && submission.status != SubmissionStatus.ConfirmationPending)
+            submission.status = SubmissionStatus.Confirmed;
+        else
+            return;
         await _submissionRepository.UpdateAsync(submission.id!, submission);
     }
 
@@ -50,66 +53,55 @@ public class SubmissionService : ISubmissionService
     {
         var submission = await _submissionRepository.GetAsync(submissionId);
         if (submission is null) throw new FileNotFoundException();
-        var userFile = await _userFileRepository.GetAsync(submission.fileId!);
-        if (userFile is null) throw new FileNotFoundException();
+        var ligandFile = await _fileService.GetFile(submission!.pdbqtFileId!);
+        if (ligandFile is null) throw new FileNotFoundException();
 
         var uniProtIds = await GetUniProtIdsFromSubmission(submissionId);
-        var receptors = await _receptorFileService.GetFilesForUniProtIds(uniProtIds);
+        var receptors = await _receptorService.GetReceptorsForUniProtIds(uniProtIds);
         foreach (var receptor in receptors)
         {
+            if (receptor.status != ReceptorFileStatus.Ready) continue;
+            var receptorFile = await _fileService.GetFile(receptor.pdbqtFileId!);
+            var receptorConfig = await _fileService.GetFile(receptor.configFileId!);
             var docking = new DockingTask
             {
                 submissionId = submission.id!,
                 receptorId = receptor.id!,
-                fullLigandPath = userFile.fullPDBQTPath,
-                fullReceptorPath = receptor.fullPDBQTPath,
-                fullConfigPath = receptor.fullConfigPath
+                ligandPath = ligandFile.path,
+                receptorPath = receptorFile!.path,
+                configPath = receptorConfig!.path
             };
             await _dockingPublisher.PublishDockingTask(docking);
         }
     }
 
-    public async Task<Guid> CreateSubmission(Guid fileGuid, string emailAddress, string IP)
+    public async Task<Submission> CreateSubmission(IFormFile ligandFile, string ipAddress)
     {
         Guid guid = Guid.NewGuid();
-        UserFile? userFile = await _userFileRepository.GetByGuid(fileGuid);
-        if (userFile is null) throw new FileNotFoundException();
-        // Add verification that no submission exists for file id
+        Guid confirmationGuid = Guid.NewGuid();
 
-        await _submissionRepository.CreateAsync(new Submission {
+        var file = await _fileService.CreateFile(ligandFile, "ligands", true);
+
+        var submission = await _submissionRepository.CreateAsync(new Submission {
             guid = guid,
-            fileId = userFile.id,
-            emailAddress = emailAddress,
-            IP = IP,
-            confirmed = false
+            confirmationGuid = confirmationGuid,
+            fileId = file!.id,
+            IP = ipAddress
         });
-        return guid;
+
+        return submission;
     }
 
-    public async Task<string> CreateDirectory(Guid submissionGuid)
+    public async Task AddReceptors(Guid submissionGuid, IFormFile file)
     {
-        var directory = Path.Combine(_configuration.GetSection("Storage")["Submissions"], submissionGuid.ToString());
         var submission = await GetSubmission(submissionGuid);
-        submission!.submissionPath = directory;
-        await _submissionRepository.UpdateAsync(submission.id!, submission!);
-        Directory.CreateDirectory(directory);
-        return directory;
-    }
-
-    public async Task CreateReceptorListFile(Guid submissionGuid, string directory, IFormFile file)
-    {
+        if (submission!.receptorListFileId != null)
+            await _fileService.RemoveFile(submission!.receptorListFileId);
         try
         {
-            var fileName = "receptors.txt";
-            var fullPath = Path.Combine(directory, fileName);
-
-            using (var stream = new FileStream(fullPath, FileMode.Create))
-            {
-                file.CopyTo(stream);
-            }
-
-            var submission = await GetSubmission(submissionGuid);
-            submission!.receptorListPath = fullPath;
+            var fileDescriptor = await _fileService.CreateFile(file, "receptorlists", false);
+            
+            submission!.receptorListFileId = fileDescriptor!.id;
             await _submissionRepository.UpdateAsync(submission.id!, submission!);
 
             return;
@@ -138,15 +130,14 @@ public class SubmissionService : ISubmissionService
         return submission;
     }
 
-    public async Task<FileStream?> GetResultFile(Guid submissionGuid, Guid resultGuid)
+    public async Task<FileDescriptor?> GetResultFile(Guid submissionGuid, Guid resultGuid)
     {
         var submission = await _submissionRepository.GetByGuid(submissionGuid);
         if (submission is null) throw new FileNotFoundException();
         var result = await _resultRepository.GetByGuid(resultGuid);
         if (result is null) throw new FileNotFoundException();
-
-        var fileStream = new FileStream(result.fullOutputPath, FileMode.Open);
-        return fileStream;
+        if (result.submissionId != submission.id) throw new FileNotFoundException();
+        return await _fileService.GetFile(result.outputFileId);
     }
 
     public async Task<HttpAPI.Models.DockingResult?> GetResult(Guid submissionGuid, Guid resultGuid)
@@ -154,10 +145,11 @@ public class SubmissionService : ISubmissionService
         return await _resultRepository.GetByGuid(resultGuid);
     }
 
-    private async Task<IEnumerable<string>> GetUniProtIdsFromSubmission(string submissionId)
+    public async Task<IEnumerable<string>> GetUniProtIdsFromSubmission(string submissionId)
     {
         var submission = await _submissionRepository.GetAsync(submissionId);
-        var uniProtIds = await File.ReadAllLinesAsync(submission!.receptorListPath);
+        var file = await _fileService.GetFile(submission!.receptorListFileId!);
+        var uniProtIds = await File.ReadAllLinesAsync(file!.path);
         return uniProtIds;
     }
 }

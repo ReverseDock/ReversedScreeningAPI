@@ -6,9 +6,9 @@ public record DockingTask
 
     public string receptorId { get; init; } = null!;
 
-    public string fullLigandPath { get; init; } = null!;
+    public string ligandPath { get; init; } = null!;
 
-    public string fullReceptorPath { get; init; } = null!;
+    public string receptorPath { get; init; } = null!;
 
-    public string fullConfigPath { get; init; } = null!;
+    public string configPath { get; init; } = null!;
 }

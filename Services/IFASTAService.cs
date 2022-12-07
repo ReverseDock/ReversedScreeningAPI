@@ -4,5 +4,6 @@ namespace Services;
 
 public interface IFASTAService
 {
-    public Task PublishFASTATask(ReceptorFile? receptor = null, UserFile? userFile = null);
+    public Task PublishFASTATask(Receptor receptor);
+    public Task PublishFASTATask(Submission submission);
 }

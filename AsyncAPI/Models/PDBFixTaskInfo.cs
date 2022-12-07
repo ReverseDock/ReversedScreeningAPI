@@ -2,5 +2,5 @@ namespace AsyncAPI.Models;
 
 public record PDBFixTaskInfo
 {
-    public string? userFileId { get; init; }
+    public string? submissionId { get; init; }
 }

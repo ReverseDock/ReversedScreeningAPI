@@ -4,7 +4,7 @@ using AsyncAPI.Models;
 
 using DataAccess.Repositories;
 
-using HttpAPI.Models;
+using Services;
 
 using MassTransit;
 
@@ -14,17 +14,17 @@ namespace AsyncAPI.Consumers;
 
 public class PDBFixResultConsumer : IConsumer<PDBFixResult>
 {
-    private readonly IUserFileRepository _userFileRepository;
-    private readonly IReceptorFileRepository _receptorFileRepository;
+    private readonly ISubmissionRepository _submissionRepository;
     private readonly IConnectionMultiplexer _redis;
+    private readonly IFileService _fileService;
 
-    public PDBFixResultConsumer(IUserFileRepository userFileRepository,
-                               IReceptorFileRepository receptorFileRepository,
-                               IConnectionMultiplexer redis)
+    public PDBFixResultConsumer(ISubmissionRepository submissionRepository,
+                               IConnectionMultiplexer redis,
+                               IFileService fileService)
     {
-        _userFileRepository = userFileRepository;
-        _receptorFileRepository = receptorFileRepository;
+        _submissionRepository = submissionRepository;
         _redis = redis;
+        _fileService = fileService;
     }
 
     public async Task Consume(ConsumeContext<PDBFixResult> context)
@@ -38,9 +38,12 @@ public class PDBFixResultConsumer : IConsumer<PDBFixResult>
         PDBFixTaskInfo? taskInfo = JsonSerializer.Deserialize<PDBFixTaskInfo>(taskInfoRaw.ToString());
         if (taskInfo is null) throw new FileNotFoundException();
 
-        var userFile = await _userFileRepository.GetAsync(taskInfo.userFileId!);
-        userFile!.fullFixedPath = model.fullPath;
-        userFile!.fixedJSONResult = model.JSONResult;
-        await _userFileRepository.UpdateAsync(taskInfo.userFileId!, userFile!);
+        var submission = await _submissionRepository.GetAsync(taskInfo.submissionId!);
+
+        var fixedFile = await _fileService.CreateFile(model.path, true);
+        submission!.fixedFileId = fixedFile!.id;
+        submission!.fixedJSONResult = model.JSONResult;
+
+        await _submissionRepository.UpdateAsync(taskInfo.submissionId!, submission!);
     }
 }

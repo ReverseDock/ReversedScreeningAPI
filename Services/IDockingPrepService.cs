@@ -4,5 +4,6 @@ namespace Services;
 
 public interface IDockingPrepService
 {
-    public Task PrepareForDocking(ReceptorFile? receptor = null, UserFile? userFile = null, Submission? submission = null);
+    public Task PrepareForDocking(Receptor receptor);
+    public Task PrepareForDocking(Submission submission);
 }

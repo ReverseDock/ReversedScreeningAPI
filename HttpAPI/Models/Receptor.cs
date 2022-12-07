@@ -3,15 +3,17 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace HttpAPI.Models;
 
-public class ReceptorFile
+public class Receptor
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? id { get; set; }
-    public int group { get; set; }
-    public string fullPath { get; set; } = null!;
-    public string fullPDBQTPath { get; set; } = null!;
-    public string fullConfigPath { get; set; } = null!;
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? fileId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? pdbqtFileId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? configFileId { get; set; }
     public string FASTA { get; set; } = null!;
     public string UniProtID { get; set; } = null!;
     public ReceptorFileStatus status { get; set; }

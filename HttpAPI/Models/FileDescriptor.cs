@@ -3,17 +3,14 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace HttpAPI.Models;
 
-public class UserFile
+public class FileDescriptor
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? id { get; set; }
     public Guid guid { get; set; }
-    public string fullPath { get; set; } = null!;
-    public string fullFixedPath { get; set; } = null!;
-    public string fixedJSONResult { get; set; } = null!;
-    public string fullPDBQTPath { get; set; } = null!;
-    public string FASTA { get; set; } = null!;
+    public string path { get; set; } = null!;
+    public bool isPublic { get; set; } = false;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
 }

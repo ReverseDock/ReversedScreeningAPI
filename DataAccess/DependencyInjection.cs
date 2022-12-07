@@ -23,8 +23,8 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ISubmissionRepository, SubmissionRepository>();
-            services.AddSingleton<IUserFileRepository, UserFileRepository>();
-            services.AddSingleton<IReceptorFileRepository, ReceptorFileRepository>();
+            services.AddSingleton<IFileRepository, FileRepository>();
+            services.AddSingleton<IReceptorRepository, ReceptorRepository>();
             services.AddSingleton<IDockingResultRepository, DockingResultRepository>();
 
             return services;

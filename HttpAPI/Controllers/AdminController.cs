@@ -9,38 +9,41 @@ namespace HttpAPI.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly ILogger<AdminController> _logger;
-    private readonly IReceptorFileService _receptorFileService;
+    private readonly IReceptorService _receptorService;
     private readonly IFASTAService _FASTAService;
+    private readonly IFileService _fileService;
     private readonly IDockingPrepService _dockingPrepService;
 
     public AdminController(ILogger<AdminController> logger,
-                           IReceptorFileService receptorFileService,
+                           IReceptorService receptorService,
                            IFASTAService FASTAService,
-                           IDockingPrepService dockingPrepService)
+                           IDockingPrepService dockingPrepService,
+                           IFileService fileService)
     {
         _logger = logger;
-        _receptorFileService = receptorFileService;
+        _receptorService = receptorService;
         _FASTAService = FASTAService;
         _dockingPrepService = dockingPrepService;
+        _fileService = fileService;
     }
 
     [HttpPost]
     [Route("receptors")]
-    public async Task<ActionResult> CreateReceptorFile(IFormFile formFile, [FromForm] int group, [FromForm] string UniProtId) 
+    public async Task<ActionResult> CreateReceptorFile(IFormFile formFile, [FromForm] string UniProtId) 
     {
         if (formFile.Length == 0) return BadRequest();
-        var result = await _receptorFileService.CreateFile(formFile, group, UniProtId);
-        if (result is null) return BadRequest();
-        await _FASTAService.PublishFASTATask(result);
-        await _dockingPrepService.PrepareForDocking(result);
+        var receptor = await _receptorService.CreateReceptor(formFile, UniProtId);
+        if (receptor is null) return BadRequest();
+        await _FASTAService.PublishFASTATask(receptor);
+        await _dockingPrepService.PrepareForDocking(receptor);
         return Ok();
     }
 
     [HttpGet]
     [Route("receptors")]
-    public async Task<ActionResult> GetFiles()
+    public async Task<ActionResult> GetReceptors()
     {
-        var result = await _receptorFileService.GetFiles();
+        var result = await _receptorService.GetReceptors();
         return Ok(result);
     }
 

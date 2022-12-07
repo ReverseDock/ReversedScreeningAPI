@@ -10,66 +10,135 @@ namespace HttpAPI.Controllers;
 public class SubmissionController : ControllerBase
 {
     private readonly ILogger<SubmissionController> _logger;
-    private readonly IUserFileService _userFileService;
     private readonly ISubmissionService _submissionService;
+    private readonly IPDBFixService _pdbFixService;
     private readonly IDockingPrepService _dockingPrepService;
+    private readonly IReceptorService _receptorService;
+    private readonly IFASTAService _fastaService;
+    private readonly IFileService _fileService;
 
     public SubmissionController(ILogger<SubmissionController> logger,
-                                IUserFileService userFileService,
                                 ISubmissionService submissionService,
-                                IDockingPrepService dockingPrepService)
+                                IDockingPrepService dockingPrepService,
+                                IFileService fileService, IPDBFixService pdbFixService,
+                                IFASTAService fastaService, IReceptorService receptorService)
     {
         _logger = logger;
-        _userFileService = userFileService;
         _submissionService = submissionService;
         _dockingPrepService = dockingPrepService;
+        _fileService = fileService;
+        _pdbFixService = pdbFixService;
+        _fastaService = fastaService;
+        _receptorService = receptorService;
     }
 
     [HttpPost]
-    public async Task<ActionResult> CreateSubmission(IFormFile uniProtIdsFile, [FromForm] Guid fileGuid, [FromForm] string emailAddress)
+    public async Task<ActionResult> CreateSubmission(IFormFile ligandFile)
     {
         var userIP = Request.HttpContext.Connection.RemoteIpAddress;
-        var guid = await _submissionService.CreateSubmission(fileGuid, emailAddress, userIP!.ToString());
-        var directory = await _submissionService.CreateDirectory(guid);
-        await _submissionService.CreateReceptorListFile(guid, directory, uniProtIdsFile);
-        return Ok(guid);
+        var submission = await _submissionService.CreateSubmission(ligandFile, userIP!.ToString());
+        await _pdbFixService.PublishPDBFixTask(submission);
+        await _fastaService.PublishFASTATask(submission);
+        return Ok(submission.guid);
     }
 
     [HttpPost]
-    [Route("{submissionGuid}/confirm")]
-    public async Task<ActionResult> ConfirmSubmission(Guid submissionGuid)
+    [Route("{submissionGuid}/receptors")]
+    public async Task<ActionResult> AddReceptors(Guid submissionGuid, IFormFile receptorsFile)
     {
-        await _submissionService.ConfirmSubmission(submissionGuid);
         var submission = await _submissionService.GetSubmission(submissionGuid);
-        var userFile = await _userFileService.GetFile(submission!.fileId!);
-        await _dockingPrepService.PrepareForDocking(null, userFile, submission);
+        if (submission is null) return NotFound();
+        await _submissionService.AddReceptors(submissionGuid, receptorsFile);
+        var uniProtIds = await _submissionService.GetUniProtIdsFromSubmission(submission!.id!);
+        var receptorsDTO = await _receptorService.GetReceptorStatusDTOs(uniProtIds);
+        return Ok(receptorsDTO);
+    }
+
+    [HttpPost]
+    [Route("{submissionGuid}/receptors/confirm")]
+    public async Task<ActionResult> ConfirmReceptors(Guid submissionGuid)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        return Ok(submission!.confirmationGuid);
+    }
+
+    [HttpPost]
+    [Route("{submissionGuid}/confirm/{confirmationGuid}")]
+    public async Task<ActionResult> ConfirmSubmission(Guid submissionGuid, Guid confirmationGuid)
+    {
+        await _submissionService.ConfirmSubmission(submissionGuid, confirmationGuid);
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        await _dockingPrepService.PrepareForDocking(submission!);
         return Ok();
     }
 
     [HttpGet]
-    [Route("{submissionGuid}")]
+    [Route("{submissionGuid}/results")]
     public async Task<ActionResult> GetResults(Guid submissionGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
         var results = await _submissionService.GetResults(submissionGuid);
-        var userFile = await _userFileService.GetFile(submission!.fileId!);
         var dto = new SubmissionInfoDTO
         {
-            ligandFASTA = userFile!.FASTA,
+            ligandFASTA = submission!.FASTA,
             dockingResults = results
         };
         return Ok(dto);
     }
 
     [HttpGet]
-    [Route("{submissionGuid}/{resultGuid}")]
+    [Route("{submissionGuid}/results/{resultGuid}")]
     public async Task<IActionResult> GetResultFile(Guid submissionGuid, Guid resultGuid)
+    {
+        var file = await _submissionService.GetResultFile(submissionGuid, resultGuid);
+        var fileStream = await _fileService.GetFileStream(file!.id!);
+        if (fileStream is null) return NotFound();
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(file!.path));
+    }
+
+    [Route("{submissionGuid}/ligand/fixed")]
+    [HttpGet]
+    public async Task<IActionResult> GetFixedFile(Guid submissionGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
         if (submission is null) return NotFound();
-        var fileStream = await _submissionService.GetResultFile(submissionGuid, resultGuid);
+        if (submission.fixedFileId is null) return NotFound();
+        var file = await _fileService.GetFile(submission.fixedFileId);
+        if (file is null) return NotFound();
+        var fileStream = await _fileService.GetFileStream(submission.fixedFileId);
         if (fileStream is null) return NotFound();
-        var result = await _submissionService.GetResult(submissionGuid, resultGuid);
-        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(result!.fullOutputPath));
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(file.path));
+    }
+
+    [Route("{submissionGuid}/ligand/fixed/results")]
+    [HttpGet]
+    public async Task<IActionResult> GetFixedResults(Guid submissionGuid)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        if (submission is null) return NotFound();
+        return Ok(submission.fixedJSONResult);
+    }
+
+    [Route("{submissionGuid}/ligand/fixed/status")]
+    [HttpGet]
+    public async Task<IActionResult> GetFixStatus(Guid submissionGuid)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        if (submission is null) return NotFound();
+        if (submission.fixedFileId != null) return Ok();
+        return Conflict();
+    }
+
+    [Route("{submissionGuid}/ligand")]
+    [HttpGet]
+    public async Task<IActionResult> GetFile(Guid submissionGuid)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        if (submission is null) return NotFound();
+        var file = await _fileService.GetFile(submission.fileId!);
+        if (file is null) return NotFound();
+        var fileStream = await _fileService.GetFileStream(submission.fileId!);
+        if (fileStream is null) return NotFound();
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(file.path));
     }
 }
