@@ -43,11 +43,12 @@ public class DockingResultRepository : IDockingResultRepository
         var DockingResults = await _DockingResultCollection.Aggregate()
             .Match<DockingResult>(x => x.submissionId == submissionId)
             .Project<DockingResult, DockingResultReceptorAffinityProjection>(x =>
-                new DockingResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity })
+                new DockingResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity, guid = x.guid })
             .Lookup<DockingResultReceptorAffinityProjection, ReceptorFile, DockingResultReceptorAffinityReceptorsProjection>(
                 _ReceptorFileCollection, x => x.receptorId, y => y.id, z => z.receptors)
             .Project<DockingResultReceptorAffinityReceptorsProjection, DockingResultDTO>(x =>
-                new DockingResultDTO { receptorFASTA = x.receptors.First().FASTA, affinity = x.affinity })
+                new DockingResultDTO { receptorFASTA = x.receptors.First().FASTA, UniProtId = x.receptors.First().UniProtID,
+                                       guid = x.guid, affinity = x.affinity })
             .ToListAsync<DockingResultDTO>();
         return DockingResults;
     }
@@ -60,6 +61,11 @@ public class DockingResultRepository : IDockingResultRepository
     public async Task<List<DockingResult>> GetBySubmissionId(string submissionId)
     {
         return await _DockingResultCollection.Find(x => x.submissionId == submissionId).ToListAsync();
+    }
+
+    public async Task<DockingResult?> GetByGuid(Guid resultGuid)
+    {
+        return await _DockingResultCollection.Find(x => x.guid == resultGuid).FirstOrDefaultAsync();
     }
 
     public async Task<DockingResult> CreateAsync(DockingResult DockingResult) 
@@ -85,12 +91,14 @@ public class DockingResultRepository : IDockingResultRepository
     {
         public string receptorId { get; init; } = null!;
         public float affinity { get; init; }
+        public Guid guid { get; init; }
     };
 
     private class DockingResultReceptorAffinityReceptorsProjection
     {
         public string receptorId { get; init; } = null!;
         public float affinity { get; init; }
+        public Guid guid { get; init; }
         public IEnumerable<ReceptorFile> receptors;
     };
 }

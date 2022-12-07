@@ -8,6 +8,7 @@ public class DockingResult
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? id { get; set; }
+    public Guid guid { get; init; }
     [BsonRepresentation(BsonType.ObjectId)]
     public string submissionId { get; init; } = null!;
     [BsonRepresentation(BsonType.ObjectId)]

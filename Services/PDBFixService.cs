@@ -14,13 +14,13 @@ namespace Services;
 class PDBFixService : IPDBFixService
 {
     private readonly ILogger<PDBFixService> _logger;
-    private readonly IRepository<ReceptorFile> _fileRepository;
+    private readonly IReceptorFileRepository _fileRepository;
     private readonly IConfiguration _configuration;
     private readonly IPDBFixTaskPublisher _taskPublisher;
     private readonly IConnectionMultiplexer _redis;
 
     
-    public PDBFixService(ILogger<PDBFixService> logger, IRepository<ReceptorFile> fileRepository,
+    public PDBFixService(ILogger<PDBFixService> logger, IReceptorFileRepository fileRepository,
                                IConfiguration configuration, IPDBFixTaskPublisher taskPublisher,
                                IConnectionMultiplexer redis)
     {

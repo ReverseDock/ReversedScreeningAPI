@@ -22,6 +22,7 @@ public class DockingResultConsumer : IConsumer<AsyncAPI.Models.DockingResult>
         var model = context.Message;
         var dbDockingResult = new HttpAPI.Models.DockingResult
         {
+            guid = Guid.NewGuid(),
             submissionId = model.submission,
             receptorId = model.receptor,
             affinity = model.affinity,

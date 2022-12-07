@@ -26,10 +26,12 @@ public class SubmissionController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult> CreateSubmission([FromForm] Guid fileGuid, [FromForm] string emailAddress)
+    public async Task<ActionResult> CreateSubmission(IFormFile uniProtIdsFile, [FromForm] Guid fileGuid, [FromForm] string emailAddress)
     {
         var userIP = Request.HttpContext.Connection.RemoteIpAddress;
         var guid = await _submissionService.CreateSubmission(fileGuid, emailAddress, userIP!.ToString());
+        var directory = await _submissionService.CreateDirectory(guid);
+        await _submissionService.CreateReceptorListFile(guid, directory, uniProtIdsFile);
         return Ok(guid);
     }
 
@@ -57,5 +59,17 @@ public class SubmissionController : ControllerBase
             dockingResults = results
         };
         return Ok(dto);
+    }
+
+    [HttpGet]
+    [Route("{submissionGuid}/{resultGuid}")]
+    public async Task<IActionResult> GetResultFile(Guid submissionGuid, Guid resultGuid)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        if (submission is null) return NotFound();
+        var fileStream = await _submissionService.GetResultFile(submissionGuid, resultGuid);
+        if (fileStream is null) return NotFound();
+        var result = await _submissionService.GetResult(submissionGuid, resultGuid);
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(result!.fullOutputPath));
     }
 }

@@ -26,10 +26,10 @@ public class AdminController : ControllerBase
 
     [HttpPost]
     [Route("receptors")]
-    public async Task<ActionResult> CreateReceptorFile(IFormFile formFile, [FromQuery] int group) 
+    public async Task<ActionResult> CreateReceptorFile(IFormFile formFile, [FromForm] int group, [FromForm] string UniProtId) 
     {
         if (formFile.Length == 0) return BadRequest();
-        var result = await _receptorFileService.CreateFile(formFile, group);
+        var result = await _receptorFileService.CreateFile(formFile, group, UniProtId);
         if (result is null) return BadRequest();
         await _FASTAService.PublishFASTATask(result);
         await _dockingPrepService.PrepareForDocking(result);

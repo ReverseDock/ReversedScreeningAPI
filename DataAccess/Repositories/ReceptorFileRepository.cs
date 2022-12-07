@@ -4,7 +4,7 @@ using MongoDB.Driver;
 
 namespace DataAccess.Repositories;
 
-public class ReceptorFileRepository : IRepository<ReceptorFile>
+public class ReceptorFileRepository : IReceptorFileRepository
 {
     private readonly IMongoCollection<ReceptorFile> _ReceptorFileCollection;
 
@@ -27,6 +27,11 @@ public class ReceptorFileRepository : IRepository<ReceptorFile>
     public async Task<ReceptorFile?> GetAsync(string id)
     {
         return await _ReceptorFileCollection.Find(x => x.id == id).FirstOrDefaultAsync();
+    }
+
+    public async Task<List<ReceptorFile>> GetAsync(IEnumerable<string> uniProtIds)
+    {
+        return await _ReceptorFileCollection.Find(x => uniProtIds.Contains(x.UniProtID)).ToListAsync();
     }
 
     public async Task<ReceptorFile> CreateAsync(ReceptorFile ReceptorFile) 

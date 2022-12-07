@@ -14,6 +14,8 @@ public class Submission
     public string emailAddress = null!;
     public string IP = null!;
     public bool failed = false;
+    public string receptorListPath = null!;
+    public string submissionPath = null!;
     public bool confirmed = false;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;

@@ -9,10 +9,10 @@ namespace Services;
 class ReceptorFileService : IReceptorFileService
 {
     private readonly ILogger<ReceptorFileService> _logger;
-    private readonly IRepository<ReceptorFile> _fileRepository;
+    private readonly IReceptorFileRepository _fileRepository;
     private readonly IConfiguration _configuration;
     
-    public ReceptorFileService(ILogger<ReceptorFileService> logger, IRepository<ReceptorFile> fileRepository,
+    public ReceptorFileService(ILogger<ReceptorFileService> logger, IReceptorFileRepository fileRepository,
                                IConfiguration configuration)
     {
         _logger = logger;
@@ -20,12 +20,12 @@ class ReceptorFileService : IReceptorFileService
         _configuration = configuration;
     }
 
-    public async Task<ReceptorFile?> CreateFile(IFormFile formFile, int group)
+    public async Task<ReceptorFile?> CreateFile(IFormFile formFile, int group, string UniProtId)
     {
         try
         {
             var file = formFile;
-            var pathToSave = Path.Combine(_configuration.GetSection("Storage")["Receptors"], group.ToString());
+            var pathToSave = Path.Combine(_configuration.GetSection("Storage")["Receptors"], group.ToString(), UniProtId);
             Directory.CreateDirectory(pathToSave);
             
             var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName!.Trim('"');
@@ -38,7 +38,8 @@ class ReceptorFileService : IReceptorFileService
             var receptorFile = await _fileRepository.CreateAsync(new ReceptorFile {
                 fullPath = fullPath,
                 group = group,
-                FASTA = ""
+                FASTA = "",
+                UniProtID = UniProtId
             });
 
             return receptorFile;
@@ -64,5 +65,10 @@ class ReceptorFileService : IReceptorFileService
         var fileStream = new FileStream(fileObject.fullPath, FileMode.Open);
         
         return fileStream;
+    }
+
+    public async Task<List<ReceptorFile>> GetFilesForUniProtIds(IEnumerable<string> uniProtIds)
+    {
+        return await _fileRepository.GetAsync(uniProtIds);
     }
 }

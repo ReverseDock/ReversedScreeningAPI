@@ -13,7 +13,7 @@ public class ReceptorFile
     public string fullPDBQTPath { get; set; } = null!;
     public string fullConfigPath { get; set; } = null!;
     public string FASTA { get; set; } = null!;
-    public string name { get; set; } = null!;
+    public string UniProtID { get; set; } = null!;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
 }

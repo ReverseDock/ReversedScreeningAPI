@@ -15,11 +15,11 @@ namespace AsyncAPI.Consumers;
 public class FASTAResultConsumer : IConsumer<FASTAResult>
 {
     private readonly IUserFileRepository _userFileRepository;
-    private readonly IRepository<ReceptorFile> _receptorFileRepository;
+    private readonly IReceptorFileRepository _receptorFileRepository;
     private readonly IConnectionMultiplexer _redis;
 
     public FASTAResultConsumer(IUserFileRepository userFileRepository,
-                               IRepository<ReceptorFile> receptorFileRepository,
+                               IReceptorFileRepository receptorFileRepository,
                                IConnectionMultiplexer redis)
     {
         _userFileRepository = userFileRepository;

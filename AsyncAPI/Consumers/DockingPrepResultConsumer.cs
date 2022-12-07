@@ -17,13 +17,13 @@ namespace AsyncAPI.Consumers;
 public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
 {
     private readonly IUserFileRepository _userFileRepository;
-    private readonly IRepository<ReceptorFile> _receptorFileRepository;
+    private readonly IReceptorFileRepository _receptorFileRepository;
     private readonly ISubmissionRepository _submissionRepository;
     private readonly IConnectionMultiplexer _redis;
     private readonly ISubmissionService _submissionService;
 
     public DockingPrepResultConsumer(IUserFileRepository userFileRepository,
-                                     IRepository<ReceptorFile> receptorFileRepository,
+                                     IReceptorFileRepository receptorFileRepository,
                                      IConnectionMultiplexer redis, ISubmissionService submissionService,
                                      ISubmissionRepository submissionRepository)
     {
@@ -45,16 +45,15 @@ public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
         DockingPrepTaskInfo? taskInfo = JsonSerializer.Deserialize<DockingPrepTaskInfo>(taskInfoRaw.ToString());
         if (taskInfo is null) throw new FileNotFoundException();
 
-        if (model.fullPath is null)
-        {
-            var submission = await _submissionRepository.GetAsync(taskInfo.submissionId!);
-            submission!.failed = true;
-            await _submissionRepository.UpdateAsync(taskInfo.submissionId!, submission);
-            return;
-        }
-
         if (taskInfo.type == EDockingPrepPeptideType.Receptor)
         {
+            if (model.fullPath is null)
+            {
+                await _receptorFileRepository.RemoveAsync(taskInfo.receptorId!);
+                // leaves orphaned files!!
+                return;
+            }
+
             var receptor = await _receptorFileRepository.GetAsync(taskInfo.receptorId!);
             receptor!.fullPDBQTPath = model.fullPath;
             receptor!.fullConfigPath = model.fullConfigPath;
@@ -62,6 +61,14 @@ public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
         }
         else if (taskInfo.type == EDockingPrepPeptideType.Ligand)
         {
+            if (model.fullPath is null)
+            {
+                var submission = await _submissionRepository.GetAsync(taskInfo.submissionId!);
+                submission!.failed = true;
+                await _submissionRepository.UpdateAsync(taskInfo.submissionId!, submission);
+                return;
+            }
+
             var userFile = await _userFileRepository.GetAsync(taskInfo.userFileId!);
             userFile!.fullPDBQTPath = model.fullPath;
             await _userFileRepository.UpdateAsync(taskInfo.userFileId!, userFile!);
