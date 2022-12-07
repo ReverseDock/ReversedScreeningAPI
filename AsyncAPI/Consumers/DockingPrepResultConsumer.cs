@@ -47,14 +47,17 @@ public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
 
         if (taskInfo.type == EDockingPrepPeptideType.Receptor)
         {
+            var receptor = await _receptorFileRepository.GetAsync(taskInfo.receptorId!);
             if (model.fullPath is null)
             {
-                await _receptorFileRepository.RemoveAsync(taskInfo.receptorId!);
+                if (receptor!.status != ReceptorFileStatus.TooBig)
+                    receptor!.status = ReceptorFileStatus.PDBQTError;
+                await _receptorFileRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
                 // leaves orphaned files!!
                 return;
             }
 
-            var receptor = await _receptorFileRepository.GetAsync(taskInfo.receptorId!);
+            receptor!.status = ReceptorFileStatus.Ready;
             receptor!.fullPDBQTPath = model.fullPath;
             receptor!.fullConfigPath = model.fullConfigPath;
             await _receptorFileRepository.UpdateAsync(taskInfo.receptorId!, receptor!);

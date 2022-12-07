@@ -17,14 +17,16 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
     private readonly IUserFileRepository _userFileRepository;
     private readonly IReceptorFileRepository _receptorFileRepository;
     private readonly IConnectionMultiplexer _redis;
+    private readonly IConfiguration _configuration;
 
     public FASTAResultConsumer(IUserFileRepository userFileRepository,
                                IReceptorFileRepository receptorFileRepository,
-                               IConnectionMultiplexer redis)
+                               IConnectionMultiplexer redis, IConfiguration configuration)
     {
         _userFileRepository = userFileRepository;
         _receptorFileRepository = receptorFileRepository;
         _redis = redis;
+        _configuration = configuration;
     }
 
     public async Task Consume(ConsumeContext<FASTAResult> context)
@@ -42,6 +44,8 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
         {
             var receptor = await _receptorFileRepository.GetAsync(taskInfo.receptorId!);
             receptor!.FASTA = model.FASTA;
+            var maxSize = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorSize"]);
+            if (model.FASTA.Length > maxSize) receptor!.status = ReceptorFileStatus.TooBig;
             await _receptorFileRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
         }
         else if (taskInfo.type == FASTATaskType.UserFile)

@@ -14,6 +14,14 @@ public class ReceptorFile
     public string fullConfigPath { get; set; } = null!;
     public string FASTA { get; set; } = null!;
     public string UniProtID { get; set; } = null!;
+    public ReceptorFileStatus status { get; set; }
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
+}
+
+public enum ReceptorFileStatus
+{
+    TooBig,
+    PDBQTError,
+    Ready
 }
