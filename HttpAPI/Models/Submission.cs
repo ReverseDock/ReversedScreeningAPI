@@ -29,12 +29,12 @@ public class Submission
 
 public enum SubmissionStatus
 {
-    Incomplete,
+    Incomplete, // No receptors added
     ConfirmationPending,
     Confirmed,
-    PreparationFailed,
-    PreparationComplete,
-    InProgress,
-    Finished,
+    PreparationFailed, // PDBQT creation failed
+    PreparationComplete, // PDBQT creation succeeded
+    InProgress, // First result is returned
+    Finished, // All results returned
     Failed
 }

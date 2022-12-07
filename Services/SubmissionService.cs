@@ -73,8 +73,6 @@ public class SubmissionService : ISubmissionService
             };
             await _dockingPublisher.PublishDockingTask(docking);
         }
-        submission.status = SubmissionStatus.InProgress;
-        await _submissionRepository.UpdateAsync(submission.id!, submission);
     }
 
     public async Task<Submission> CreateSubmission(IFormFile ligandFile, string ipAddress)
