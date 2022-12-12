@@ -15,4 +15,7 @@ public interface ISubmissionService
     public Task<DockingResult?> GetResult(Guid submissionGuid, Guid resultGuid);
     public Task<IEnumerable<string>> GetUniProtIdsFromSubmission(string submissionId);
     public Task<List<Submission>> GetSubmissions();
+    public Task UpdateSubmission(Submission submission);
+    public Task<SubmissionStatus?> GetStatus(Guid submissionGuid);
+    public Task<float> GetProgress(Guid submissionGuid);
 }

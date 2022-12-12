@@ -38,7 +38,6 @@ public class AdminController : ControllerBase
         var receptor = await _receptorService.CreateReceptor(formFile, UniProtId);
         if (receptor is null) return BadRequest();
         await _FASTAService.PublishFASTATask(receptor);
-        await _dockingPrepService.PrepareForDocking(receptor);
         return Ok();
     }
 

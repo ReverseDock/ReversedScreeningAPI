@@ -158,4 +158,25 @@ public class SubmissionService : ISubmissionService
     {
         return await _submissionRepository.GetAsync();
     }
+
+    public async Task UpdateSubmission(Submission submission)
+    {
+        await _submissionRepository.UpdateAsync(submission.id!, submission);
+    }
+
+    public async Task<float> GetProgress(Guid submissionGuid)
+    {
+        var submission = await _submissionRepository.GetByGuid(submissionGuid);
+        var uniProtIds = await GetUniProtIdsFromSubmission(submission!.id!);
+        var results = await _resultRepository.GetBySubmissionId(submission!.id!);
+        var receptors = await _receptorService.GetReceptorsForUniProtIds(uniProtIds);
+        var numberOfOkayReceptors = receptors.Count(rec => rec.status == ReceptorFileStatus.Ready);
+        return (float) results.Count() / (float) numberOfOkayReceptors;
+    }
+
+    public async Task<SubmissionStatus?> GetStatus(Guid submissionGuid)
+    {
+        var submission = await _submissionRepository.GetByGuid(submissionGuid);
+        return submission!.status;
+    }
 }

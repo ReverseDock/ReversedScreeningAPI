@@ -17,6 +17,7 @@ public class DockingResult
     [BsonRepresentation(BsonType.ObjectId)]
     public string outputFileId { get; init; } = null!;
     public int secondsToCompletion { get; init; }
+    public bool success { get; init; }
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
 };

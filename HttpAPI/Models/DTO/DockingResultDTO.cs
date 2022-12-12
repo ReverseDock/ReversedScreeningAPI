@@ -6,4 +6,5 @@ public class DockingResultDTO
     public string UniProtId { get; init; } = null!;
     public string receptorFASTA { get; init; } = null!;
     public float affinity { get; init; }
+    public bool success { get; init; }
 };

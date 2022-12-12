@@ -41,15 +41,15 @@ public class ReceptorRepository : IReceptorRepository
 
     public async Task<Receptor> CreateAsync(Receptor Receptor) 
     {
-        Receptor.createdAt = new DateTime();
-        Receptor.updatedAt = new DateTime();
+        Receptor.createdAt = DateTime.Now;
+        Receptor.updatedAt = DateTime.Now;
         await _ReceptorCollection.InsertOneAsync(Receptor);
         return Receptor;
     }
 
     public async Task UpdateAsync(string id, Receptor updatedReceptor)
     {
-        updatedReceptor.updatedAt = new DateTime();
+        updatedReceptor.updatedAt = DateTime.Now;
         await _ReceptorCollection.ReplaceOneAsync(x => x.id == id, updatedReceptor);
     }
     

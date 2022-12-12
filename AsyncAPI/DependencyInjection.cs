@@ -30,6 +30,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddTransient<IFASTATaskPublisher, FASTATaskPublisher>();
             services.AddTransient<IDockingPrepTaskPublisher, DockingPrepTaskPublisher>();
             services.AddTransient<IPDBFixTaskPublisher, PDBFixTaskPublisher>();
+            services.AddTransient<IMailTaskPublisher, MailTaskPublisher>();
             
             return services;
         }

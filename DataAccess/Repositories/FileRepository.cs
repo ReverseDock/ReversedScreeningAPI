@@ -36,15 +36,15 @@ public class FileRepository : IFileRepository
 
     public async Task<FileDescriptor> CreateAsync(FileDescriptor FileDescriptor) 
     {
-        FileDescriptor.createdAt = new DateTime();
-        FileDescriptor.updatedAt = new DateTime();
+        FileDescriptor.createdAt = DateTime.Now;
+        FileDescriptor.updatedAt = DateTime.Now;
         await _FileDescriptorCollection.InsertOneAsync(FileDescriptor);
         return FileDescriptor;
     }
 
     public async Task UpdateAsync(string id, FileDescriptor updatedFileDescriptor)
     {
-        updatedFileDescriptor.updatedAt = new DateTime();
+        updatedFileDescriptor.updatedAt = DateTime.Now;
         await _FileDescriptorCollection.ReplaceOneAsync(x => x.id == id, updatedFileDescriptor);
     }
     

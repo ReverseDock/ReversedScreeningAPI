@@ -2,6 +2,8 @@ namespace HttpAPI.Models.DTO;
 
 public class SubmissionInfoDTO
 {
-    public string ligandFASTA { get; init; } = null!;
-    public IEnumerable<DockingResultDTO> dockingResults { get; init; }
-};
+    public string ligandFileName { get; init; }
+    public string receptorListFilename { get; init; }
+    public string submissionTime { get; init; }
+
+}

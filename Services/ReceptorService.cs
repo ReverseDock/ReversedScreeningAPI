@@ -60,6 +60,11 @@ class ReceptorService : IReceptorService
         return await _receptorRepository.GetAsync(uniProtIds);
     }
 
+    public async Task<Receptor?> GetReceptorForUniProtId(string uniProtId)
+    {
+        return await _receptorRepository.GetByUniProtIdAsync(uniProtId);
+    }
+
     public async Task<List<ReceptorStatusDTO>> GetReceptorStatusDTOs(IEnumerable<string> uniProtIds)
     {
         var result = new List<ReceptorStatusDTO>(); 

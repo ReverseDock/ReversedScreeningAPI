@@ -51,13 +51,15 @@ public class DockingPrepResultConsumer : IConsumer<DockingPrepResult>
             if (model.path is null)
             {
                 if (receptor!.status != ReceptorFileStatus.TooBig)
+                {
                     receptor!.status = ReceptorFileStatus.PDBQTError;
-                await _receptorRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
+                    await _receptorRepository.UpdateAsync(taskInfo.receptorId!, receptor!);
+                }
                 // Leaves orphaned files!
                 return;
             }
 
-            var pdbqtFile = await _fileService.CreateFile(model.path, false);
+            var pdbqtFile = await _fileService.CreateFile(model.path, true);
             var configFile = await _fileService.CreateFile(model.configPath, false);
 
             receptor!.status = ReceptorFileStatus.Ready;

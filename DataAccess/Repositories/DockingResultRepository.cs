@@ -43,12 +43,12 @@ public class DockingResultRepository : IDockingResultRepository
         var DockingResults = await _DockingResultCollection.Aggregate()
             .Match<DockingResult>(x => x.submissionId == submissionId)
             .Project<DockingResult, DockingResultReceptorAffinityProjection>(x =>
-                new DockingResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity, guid = x.guid })
+                new DockingResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity, guid = x.guid, success = x.success })
             .Lookup<DockingResultReceptorAffinityProjection, Receptor, DockingResultReceptorAffinityReceptorsProjection>(
                 _ReceptorCollection, x => x.receptorId, y => y.id, z => z.receptors)
             .Project<DockingResultReceptorAffinityReceptorsProjection, DockingResultDTO>(x =>
                 new DockingResultDTO { receptorFASTA = x.receptors.First().FASTA, UniProtId = x.receptors.First().UniProtID,
-                                       guid = x.guid, affinity = x.affinity })
+                                       guid = x.guid, affinity = x.affinity, success = x.success })
             .ToListAsync<DockingResultDTO>();
         return DockingResults;
     }
@@ -70,15 +70,15 @@ public class DockingResultRepository : IDockingResultRepository
 
     public async Task<DockingResult> CreateAsync(DockingResult DockingResult) 
     {
-        DockingResult.createdAt = new DateTime();
-        DockingResult.updatedAt = new DateTime();
+        DockingResult.createdAt = DateTime.Now;
+        DockingResult.updatedAt = DateTime.Now;
         await _DockingResultCollection.InsertOneAsync(DockingResult);
         return DockingResult;
     }
 
     public async Task UpdateAsync(string id, DockingResult updatedDockingResult)
     {
-        updatedDockingResult.updatedAt = new DateTime();
+        updatedDockingResult.updatedAt = DateTime.Now;
         await _DockingResultCollection.ReplaceOneAsync(x => x.id == id, updatedDockingResult);
     }
     
@@ -92,6 +92,7 @@ public class DockingResultRepository : IDockingResultRepository
         public string receptorId { get; init; } = null!;
         public float affinity { get; init; }
         public Guid guid { get; init; }
+        public bool success  { get; init; }
     };
 
     private class DockingResultReceptorAffinityReceptorsProjection
@@ -99,6 +100,7 @@ public class DockingResultRepository : IDockingResultRepository
         public string receptorId { get; init; } = null!;
         public float affinity { get; init; }
         public Guid guid { get; init; }
+        public bool success  { get; init; }
         public IEnumerable<Receptor> receptors;
     };
 }

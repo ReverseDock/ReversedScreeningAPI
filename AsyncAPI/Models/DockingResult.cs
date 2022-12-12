@@ -7,4 +7,5 @@ public record DockingResult
     public float affinity { get; init; }
     public string outputPath { get; init; } = null!;
     public int secondsToCompletion { get; init; }
+    public bool success { get; init; }
 };

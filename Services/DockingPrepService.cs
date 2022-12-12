@@ -61,7 +61,7 @@ public class DockingPrepService : IDockingPrepService
         var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
         await db.StringSetAsync("DockingPrep:" + guid.ToString(), taskInfoJSON);
 
-        var file = await _fileService.GetFile(submission!.fixedFileId!);
+        var file = await _fileService.GetFile(submission!.fileId!);
 
         var task = new DockingPrepTask
         {

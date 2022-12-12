@@ -35,15 +35,15 @@ public class SubmissionRepository : ISubmissionRepository
 
     public async Task<Submission> CreateAsync(Submission submission) 
     {
-        submission.createdAt = new DateTime();
-        submission.updatedAt = new DateTime();
+        submission.createdAt = DateTime.Now;
+        submission.updatedAt = DateTime.Now;
         await _submissionCollection.InsertOneAsync(submission);
         return submission;
     }
 
     public async Task UpdateAsync(string id, Submission updatedSubmission)
     {
-        updatedSubmission.updatedAt = new DateTime();
+        updatedSubmission.updatedAt = DateTime.Now;
         await _submissionCollection.ReplaceOneAsync(x => x.id == id, updatedSubmission);
     }
     
