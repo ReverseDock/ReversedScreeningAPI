@@ -6,7 +6,7 @@ using DataAccess.Repositories;
 using AsyncAPI.Publishers;
 
 using StackExchange.Redis;
-using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Net.Http.Headers;
 
 namespace Services;
@@ -69,7 +69,8 @@ public class SubmissionService : ISubmissionService
                 receptorId = receptor.id!,
                 ligandPath = ligandFile.path,
                 receptorPath = receptorFile!.path,
-                configPath = receptorConfig!.path
+                configPath = receptorConfig!.path,
+                exhaustiveness = submission!.exhaustiveness
             };
             await _dockingPublisher.PublishDockingTask(docking);
         }
@@ -86,7 +87,8 @@ public class SubmissionService : ISubmissionService
             guid = guid,
             confirmationGuid = confirmationGuid,
             fileId = file!.id,
-            IP = ipAddress
+            IP = ipAddress,
+            exhaustiveness = 0
         });
 
         return submission;
@@ -151,7 +153,29 @@ public class SubmissionService : ISubmissionService
         var submission = await _submissionRepository.GetAsync(submissionId);
         var file = await _fileService.GetFile(submission!.receptorListFileId!);
         var uniProtIds = await File.ReadAllLinesAsync(file!.path);
-        return uniProtIds;
+        // Determine format
+        var filteredUniProtIds = uniProtIds
+            .Where(x =>
+            {
+                if (x.Contains(":"))
+                {
+                    var elements = x.Split(":");
+                    if (elements[0] == "UniProtKB") return true;
+                    return false;
+                }
+                return true;
+            })
+            .Select(x =>
+            {
+                if (x.Contains(":"))
+                {
+                    var elements = x.Split(":");
+                    var elements2 = elements[1].Split('\t');
+                    return elements2[0];
+                }
+                return x;
+            });
+        return filteredUniProtIds;
     }
 
     public async Task<List<Submission>> GetSubmissions()

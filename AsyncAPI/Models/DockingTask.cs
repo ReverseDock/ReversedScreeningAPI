@@ -11,4 +11,6 @@ public record DockingTask
     public string receptorPath { get; init; } = null!;
 
     public string configPath { get; init; } = null!;
+    
+    public int exhaustiveness { get; init; } = 0;
 }

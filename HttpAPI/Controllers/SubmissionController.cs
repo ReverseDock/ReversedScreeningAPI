@@ -56,10 +56,22 @@ public class SubmissionController : ControllerBase
         if (submission is null) return NotFound();
         if (submission.status >= Models.SubmissionStatus.Confirmed) return BadRequest("Can't change receptors, submission already confirmed.");
         await _submissionService.AddReceptors(submissionGuid, receptorsFile);
+        // Add validation
         var uniProtIds = await _submissionService.GetUniProtIdsFromSubmission(submission!.id!);
-        var maxReceptors = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorAmount"]);
-        if (uniProtIds.Count() > maxReceptors) return BadRequest($"Too many UniProtId's provided. Limit is {maxReceptors}.");
         var receptorsDTO = await _receptorService.GetReceptorStatusDTOs(uniProtIds);
+        var maxReceptors = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorAmount"]);
+        var maxExhaustiveness = int.Parse(_configuration.GetSection("Limitations")["MaxExhaustiveness"]);
+        var okayReceptors = receptorsDTO.Where(x => x.status == "Okay").Count();
+        if (okayReceptors > maxReceptors)
+        {
+            submission!.receptorListFileId = null;
+            await _submissionService.UpdateSubmission(submission);
+            return BadRequest($"Too many UniProtId's provided. Limit is {maxReceptors}.");
+        }
+        var exhaustiveness = (int) Math.Ceiling((((float) (maxReceptors - okayReceptors + 1)) / (float) (maxReceptors)) * maxExhaustiveness);
+        var submissionNew = await _submissionService.GetSubmission(submissionGuid);
+        submissionNew!.exhaustiveness = exhaustiveness;
+        await _submissionService.UpdateSubmission(submissionNew); 
         return Ok(receptorsDTO);
     }
 

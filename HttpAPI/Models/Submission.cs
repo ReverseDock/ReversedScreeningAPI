@@ -11,17 +11,19 @@ public class Submission
     public Guid guid { get; set; }
     public Guid confirmationGuid { get; set; }
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? fileId = null;
-    public string emailAddress = null!;
-    public string IP = null!;
+    public string? fileId { get; set; }
+    public string emailAddress { get; set; }
+    public string IP { get; set; }
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? receptorListFileId = null;
+    public string? receptorListFileId { get; set; }
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? fixedFileId = null;
-    public string fixedJSONResult { get; set; } = null!;
+    public string? fixedFileId { get; set; }
+    public string fixedJSONResult { get; set; }
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? pdbqtFileId = null;
-    public string FASTA { get; set; } = null!;
+    public string? pdbqtFileId { get; set; }
+    public string FASTA { get; set; }
+    [BsonRepresentation(BsonType.Int32)]
+    public int exhaustiveness { get; set; }
     public SubmissionStatus status { get; set; } = SubmissionStatus.Incomplete;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
