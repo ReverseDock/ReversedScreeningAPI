@@ -16,6 +16,7 @@ public class Receptor
     public string? configFileId { get; set; }
     public string FASTA { get; set; } = null!;
     public string UniProtID { get; set; } = null!;
+    public string name { get; set; } = null!;
     public ReceptorFileStatus status { get; set; }
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;

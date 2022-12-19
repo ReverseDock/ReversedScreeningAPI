@@ -12,16 +12,18 @@ namespace AsyncAPI.Consumers;
 
 public class DockingResultConsumer : IConsumer<AsyncAPI.Models.DockingResult>
 {
+    private readonly ILogger<DockingResultConsumer> _logger;
     private readonly IDockingResultRepository _DockingResultsRepository;
     private readonly ISubmissionRepository _submissionRepository;
     private readonly IFileService _fileService;
     private readonly ISubmissionService _submissionService;
     private readonly IMailService _mailService;
 
-    public DockingResultConsumer(IDockingResultRepository DockingResultRepository, IFileService fileService,
+    public DockingResultConsumer(ILogger<DockingResultConsumer> logger, IDockingResultRepository DockingResultRepository, IFileService fileService,
                                  ISubmissionRepository submissionRepository, ISubmissionService submissionService,
                                  IMailService mailService)
     {
+        _logger = logger;
         _DockingResultsRepository = DockingResultRepository;
         _fileService = fileService;
         _submissionRepository = submissionRepository;
@@ -32,12 +34,19 @@ public class DockingResultConsumer : IConsumer<AsyncAPI.Models.DockingResult>
     public async Task Consume(ConsumeContext<AsyncAPI.Models.DockingResult> context)
     {
         var model = context.Message;
-        var outputFile = await _fileService.CreateFile(model.outputPath, true);
+        FileDescriptor? outputFile = null;
+        if (model.outputPath != "")
+            outputFile = await _fileService.CreateFile(model.outputPath, "results", true);
         var submission = await _submissionRepository.GetAsync(model.submission);
-
-        if (submission!.status != SubmissionStatus.InProgress)
+        if (submission is null)
         {
-            submission!.status = SubmissionStatus.InProgress;
+            _logger.LogError($"Could not find submission of DockingResult. Submission: {model.submission}");
+            return;
+        }
+
+        if (submission.status != SubmissionStatus.InProgress)
+        {
+            submission.status = SubmissionStatus.InProgress;
             await _submissionRepository.UpdateAsync(submission.id!, submission);
         }
 
@@ -47,13 +56,13 @@ public class DockingResultConsumer : IConsumer<AsyncAPI.Models.DockingResult>
             submissionId = model.submission,
             receptorId = model.receptor,
             affinity = model.affinity,
-            outputFileId = outputFile!.id!,
+            outputFileId = outputFile?.id!,
             secondsToCompletion = model.secondsToCompletion,
             success = model.success
         };
         await _DockingResultsRepository.CreateAsync(dbDockingResult);
 
-        var progress = await _submissionService.GetProgress(submission!.guid);
+        var progress = await _submissionService.GetProgress(submission);
         if (progress == 1.0)
         {
             submission!.status = SubmissionStatus.Finished;

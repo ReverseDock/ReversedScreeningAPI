@@ -26,8 +26,9 @@ public class ReceptorController : ControllerBase
     public async Task<ActionResult> GetReceptorPDBQTFile(string uniProtId)
     {
         var result = await _receptorService.GetReceptorForUniProtId(uniProtId);
-        var file = await _fileService.GetFile(result!.pdbqtFileId!);
-        var fs = await _fileService.GetFileStream(result!.pdbqtFileId!);
+        if (result is null) return NotFound();
+        var file = await _fileService.GetFile(result.pdbqtFileId!);
+        var fs = await _fileService.GetFileStream(result.pdbqtFileId!);
         return File(fs!, "applicaton/octet-stream", fileDownloadName: Path.GetFileName(file!.path));
     }
 }

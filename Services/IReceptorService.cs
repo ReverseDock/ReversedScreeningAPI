@@ -10,5 +10,6 @@ public interface IReceptorService
     public Task<Receptor?> CreateReceptor(IFormFile formFile, string UniProtId);
     public Task<List<Receptor>> GetReceptors();
     public Task<List<Receptor>> GetReceptorsForUniProtIds(IEnumerable<string> uniProtIds);
-    public Task<List<ReceptorStatusDTO>> GetReceptorStatusDTOs(IEnumerable<string> uniProtIds);
+    public Task<List<ReceptorDTO>> GetReceptorDTOs(IEnumerable<string> uniProtIds);
+    public Task UpdateNames();
 }

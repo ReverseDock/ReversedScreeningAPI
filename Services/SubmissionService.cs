@@ -7,7 +7,6 @@ using AsyncAPI.Publishers;
 
 using StackExchange.Redis;
 using System.Text.RegularExpressions;
-using System.Net.Http.Headers;
 
 namespace Services;
 
@@ -37,40 +36,34 @@ public class SubmissionService : ISubmissionService
         _configuration = configuration;
     }
 
-    public async Task ConfirmSubmission(Guid submissionGuid, Guid confirmationGuid)
+    public async Task ConfirmSubmission(Submission submission)
     {
-        var submission = await _submissionRepository.GetByGuid(submissionGuid);
-        if (submission is null) throw new FileNotFoundException();
-        if (submission.confirmationGuid == confirmationGuid
-            && submission.status == SubmissionStatus.ConfirmationPending)
-            submission.status = SubmissionStatus.Confirmed;
-        else
-            return;
+        submission.status = SubmissionStatus.Confirmed;
         await _submissionRepository.UpdateAsync(submission.id!, submission);
     }
 
-    public async Task CreateDockings(string submissionId)
+    public async Task CreateDockings(Submission submission)
     {
-        var submission = await _submissionRepository.GetAsync(submissionId);
-        if (submission is null) throw new FileNotFoundException();
-        var ligandFile = await _fileService.GetFile(submission!.pdbqtFileId!);
-        if (ligandFile is null) throw new FileNotFoundException();
+        var ligandFile = await _fileService.GetFile(submission.pdbqtFileId!);
+        if (ligandFile is null) throw new FileNotFoundException($"Ligand PDBQT file not found. Submission {submission.guid}");
 
-        var uniProtIds = await GetUniProtIdsFromSubmission(submissionId);
+        var uniProtIds = await GetUniProtIdsFromSubmission(submission);
         var receptors = await _receptorService.GetReceptorsForUniProtIds(uniProtIds);
         foreach (var receptor in receptors)
         {
             if (receptor.status != ReceptorFileStatus.Ready) continue;
             var receptorFile = await _fileService.GetFile(receptor.pdbqtFileId!);
+            if (receptorFile == null) continue;
             var receptorConfig = await _fileService.GetFile(receptor.configFileId!);
+            if (receptorConfig == null) continue;
             var docking = new DockingTask
             {
                 submissionId = submission.id!,
                 receptorId = receptor.id!,
                 ligandPath = ligandFile.path,
-                receptorPath = receptorFile!.path,
-                configPath = receptorConfig!.path,
-                exhaustiveness = submission!.exhaustiveness
+                receptorPath = receptorFile.path,
+                configPath = receptorConfig.path,
+                exhaustiveness = submission.exhaustiveness
             };
             await _dockingPublisher.PublishDockingTask(docking);
         }
@@ -94,66 +87,57 @@ public class SubmissionService : ISubmissionService
         return submission;
     }
 
-    public async Task AddReceptors(Guid submissionGuid, IFormFile file)
+    public async Task<FileDescriptor?> AddReceptors(Submission submission, IFormFile file)
     {
-        var submission = await GetSubmission(submissionGuid);
-        if (submission!.receptorListFileId != null)
-            await _fileService.RemoveFile(submission!.receptorListFileId);
-        try
-        {
-            var fileDescriptor = await _fileService.CreateFile(file, "receptorlists", false);
-            
-            submission!.receptorListFileId = fileDescriptor!.id;
-            submission!.status = SubmissionStatus.ConfirmationPending;
-            await _submissionRepository.UpdateAsync(submission.id!, submission!);
+        if (submission.receptorListFileId != null)
+            await _fileService.RemoveFile(submission.receptorListFileId);
 
-            return;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error when creating file: {ex}");
-            return;
-        }
+        var fileDescriptor = await _fileService.CreateFile(file, "receptorlists", false);
+
+        if (!(await ValidateReceptorsFile(fileDescriptor))) return null;
+
+        submission.receptorListFileId = fileDescriptor.id;
+        submission.status = SubmissionStatus.ConfirmationPending;
+        await _submissionRepository.UpdateAsync(submission.id!, submission);
+        return fileDescriptor;
     }
 
-    public async Task<List<DockingResultDTO>> GetResults(Guid submissionGuid)
+    public async Task<List<DockingResultDTO>> GetResults(Submission submission)
     {
-        var submission = await _submissionRepository.GetByGuid(submissionGuid);
-        if (submission is null) throw new FileNotFoundException();
         var results = await _resultRepository.GetDTOAsync(submission.id!);
-
         return results;
+    }
+
+    public async Task<Submission?> GetSubmission(string submissionId)
+    {
+        var submission = await _submissionRepository.GetAsync(submissionId);
+        return submission;
     }
 
     public async Task<Submission?> GetSubmission(Guid submissionGuid)
     {
         var submission = await _submissionRepository.GetByGuid(submissionGuid);
-        if (submission is null) throw new FileNotFoundException();
-
         return submission;
     }
 
-    public async Task<FileDescriptor?> GetResultFile(Guid submissionGuid, Guid resultGuid)
+    public async Task<FileDescriptor?> GetResultFile(Submission submission, Guid resultGuid)
     {
-        var submission = await _submissionRepository.GetByGuid(submissionGuid);
-        if (submission is null) throw new FileNotFoundException();
         var result = await _resultRepository.GetByGuid(resultGuid);
-        if (result is null) throw new FileNotFoundException();
-        if (result.submissionId != submission.id) throw new FileNotFoundException();
+        if (result is null || result.submissionId != submission.id) return null;
         return await _fileService.GetFile(result.outputFileId);
     }
 
-    public async Task<HttpAPI.Models.DockingResult?> GetResult(Guid submissionGuid, Guid resultGuid)
+    public async Task<HttpAPI.Models.DockingResult?> GetResult(Submission submission, Guid resultGuid)
     {
         return await _resultRepository.GetByGuid(resultGuid);
     }
 
-    public async Task<IEnumerable<string>> GetUniProtIdsFromSubmission(string submissionId)
+    public async Task<IEnumerable<string>> GetUniProtIdsFromSubmission(Submission submission)
     {
-        var submission = await _submissionRepository.GetAsync(submissionId);
-        var file = await _fileService.GetFile(submission!.receptorListFileId!);
-        var uniProtIds = await File.ReadAllLinesAsync(file!.path);
-        // Determine format
+        var file = await _fileService.GetFile(submission.receptorListFileId!);
+        if (file is null) throw new FileNotFoundException();
+        var uniProtIds = await File.ReadAllLinesAsync(file.path);
+
         var filteredUniProtIds = uniProtIds
             .Where(x =>
             {
@@ -175,7 +159,8 @@ public class SubmissionService : ISubmissionService
                 }
                 return x;
             });
-        return filteredUniProtIds;
+
+        return filteredUniProtIds.Distinct();
     }
 
     public async Task<List<Submission>> GetSubmissions()
@@ -188,19 +173,87 @@ public class SubmissionService : ISubmissionService
         await _submissionRepository.UpdateAsync(submission.id!, submission);
     }
 
-    public async Task<float> GetProgress(Guid submissionGuid)
+    public async Task<float> GetProgress(Submission submission)
     {
-        var submission = await _submissionRepository.GetByGuid(submissionGuid);
-        var uniProtIds = await GetUniProtIdsFromSubmission(submission!.id!);
-        var results = await _resultRepository.GetBySubmissionId(submission!.id!);
+        var uniProtIds = await GetUniProtIdsFromSubmission(submission);
+        var results = await _resultRepository.GetBySubmissionId(submission.id!);
         var receptors = await _receptorService.GetReceptorsForUniProtIds(uniProtIds);
         var numberOfOkayReceptors = receptors.Count(rec => rec.status == ReceptorFileStatus.Ready);
+        if (numberOfOkayReceptors == 0) 
+        {
+            _logger.LogWarning($"Submission without any 'Okay' receptors. Guid: {submission.guid}");
+            return 1;
+        }
         return (float) results.Count() / (float) numberOfOkayReceptors;
     }
 
-    public async Task<SubmissionStatus?> GetStatus(Guid submissionGuid)
+    public async Task<SubmissionStatus?> GetStatus(Submission submission)
     {
-        var submission = await _submissionRepository.GetByGuid(submissionGuid);
-        return submission!.status;
+        await Task.CompletedTask;
+        return submission.status;
+    }
+
+    public async Task<bool> ValidateReceptorsFile(FileDescriptor file)
+    {
+        var lines = await File.ReadAllLinesAsync(file.path);
+
+        string uniProtIdPattern = @"^[\w]+$";
+        return !lines.Any(x =>
+        {
+            var trimmed = x.Trim();
+
+            if (trimmed == "") return false;
+
+            if (trimmed.Contains(":"))
+            {
+                var elements = trimmed.Split(":");
+                if (elements[0] == "UniProtKB")
+                {
+                    var elements2 = elements[1].Split('\t');
+                    var uniProtId = elements2[0];
+                    return !Regex.Match(uniProtId, uniProtIdPattern).Success;
+                }
+                return false;
+            }
+            else
+            {
+                return !Regex.Match(trimmed, uniProtIdPattern).Success;
+            }
+        });
+    }
+
+    public async Task<bool> CheckReceptorsCount(Submission submission)
+    {
+        var receptorsDTO = await GetReceptorDTOs(submission);
+
+        var maxReceptors = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorAmount"]);
+        var okayReceptors = receptorsDTO.Where(x => x.status == "Okay").Count();
+
+        if (okayReceptors > maxReceptors)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public async Task<int> CalculateAndSetExhaustiveness(Submission submission)
+    {
+        var receptorsDTO = await GetReceptorDTOs(submission);
+
+        var maxReceptors = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorAmount"]);
+        var okayReceptors = receptorsDTO.Where(x => x.status == "Okay").Count();
+
+        var maxExhaustiveness = int.Parse(_configuration.GetSection("Limitations")["MaxExhaustiveness"]);
+        var exhaustiveness = (int) Math.Ceiling((((float) (maxReceptors - okayReceptors + 1)) / (float) (maxReceptors)) * maxExhaustiveness);
+        submission.exhaustiveness = exhaustiveness;
+        await UpdateSubmission(submission); 
+        return exhaustiveness;
+    }
+
+    public async Task<IEnumerable<ReceptorDTO>> GetReceptorDTOs(Submission submission)
+    {
+        var uniProtIds = await GetUniProtIdsFromSubmission(submission);
+        var receptorsDTO = await _receptorService.GetReceptorDTOs(uniProtIds);
+        return receptorsDTO;
     }
 }

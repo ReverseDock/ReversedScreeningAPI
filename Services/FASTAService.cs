@@ -28,38 +28,13 @@ public class FASTAService : IFASTAService
         var guid = Guid.NewGuid();
         var taskInfo = new FASTATaskInfo
         {
-            type = FASTATaskType.Receptor,
-            receptorId = receptor.id
+            receptorId = receptor.id!
         };
 
         var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
         await db.StringSetAsync("FASTA:" + guid.ToString(), taskInfoJSON);
 
         var file = await _fileService.GetFile(receptor.fileId!);
-
-        var task = new FASTATask
-        {
-            id = guid,
-            path = file!.path
-        };
-
-        await _fastaTaskPublisher.PublishFASTATask(task);
-    }
-
-    public async Task PublishFASTATask(Submission submission)
-    {
-        var db = _redis.GetDatabase();
-        var guid = Guid.NewGuid();
-        var taskInfo = new FASTATaskInfo
-        {
-            type = FASTATaskType.Ligand,
-            submissionId = submission.id!
-        };
-
-        var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
-        await db.StringSetAsync("FASTA:" + guid.ToString(), taskInfoJSON);
-
-        var file = await _fileService.GetFile(submission.fileId!);
 
         var task = new FASTATask
         {

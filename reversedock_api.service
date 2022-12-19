@@ -1,0 +1,9 @@
+[Unit]
+Description=Reversedock API
+
+[Service]
+ExecStart=/api --urls http://*:1337
+WorkingDirectory=/
+
+[Install]
+WantedBy=multi-user.target

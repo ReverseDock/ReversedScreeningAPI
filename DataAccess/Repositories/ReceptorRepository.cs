@@ -57,4 +57,10 @@ public class ReceptorRepository : IReceptorRepository
     {
         await _ReceptorCollection.DeleteOneAsync(x => x.id == id);
     }
+
+    public async Task<List<Receptor>> GetReceptorsWithoutNames()
+    {
+        var filter = Builders<Receptor>.Filter.Exists("name", false);
+        return await _ReceptorCollection.Find(filter).ToListAsync();
+    }
 }

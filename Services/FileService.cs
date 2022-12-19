@@ -20,57 +20,48 @@ class FileService : IFileService
         _configuration = configuarion;
     }
 
-    public async Task<FileDescriptor?> CreateFile(IFormFile formFile, string directory = "", bool isPublic = false)
+    public async Task<FileDescriptor> CreateFile(IFormFile formFile, string directory, bool isPublic = false)
     {
-        try
+        var guid = Guid.NewGuid();
+        var file = formFile;
+        var pathToSave = Path.Combine(_configuration.GetSection("Storage")["Files"], directory, guid.ToString());
+        Directory.CreateDirectory(pathToSave);
+        
+        var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName!.Trim('"');
+        var fullPath = Path.Combine(pathToSave, fileName);
+
+        using (var stream = new FileStream(fullPath, FileMode.Create))
         {
-            var guid = Guid.NewGuid();
-            var file = formFile;
-            var pathToSave = Path.Combine(_configuration.GetSection("Storage")["Files"], directory, guid.ToString());
-            Directory.CreateDirectory(pathToSave);
-            
-            var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName!.Trim('"');
-            var fullPath = Path.Combine(pathToSave, fileName);
-
-            using (var stream = new FileStream(fullPath, FileMode.Create))
-            {
-                file.CopyTo(stream);
-            }
-
-            var result = await _fileRepository.CreateAsync(new FileDescriptor {
-                guid = guid,
-                isPublic = isPublic,
-                path = fullPath
-            });
-
-            return result;
+            file.CopyTo(stream);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error when creating file: {ex}");
-            return null;
-        }
+
+        var result = await _fileRepository.CreateAsync(new FileDescriptor {
+            guid = guid,
+            isPublic = isPublic,
+            path = fullPath
+        });
+
+        return result;
     }
 
-    public async Task<FileDescriptor?> CreateFile(string path, bool isPublic = false)
+    public async Task<FileDescriptor> CreateFile(string path, string directory, bool isPublic = false)
     {
-        try
-        {
-            var guid = Guid.NewGuid();
+        var guid = Guid.NewGuid();
+        var pathToSave = Path.Combine(_configuration.GetSection("Storage")["Files"], directory, guid.ToString());
+        Directory.CreateDirectory(pathToSave);
 
-            var result = await _fileRepository.CreateAsync(new FileDescriptor {
-                guid = guid,
-                isPublic = isPublic,
-                path = path
-            });
+        var fileName = Path.GetFileName(path);
+        var fullPath = Path.Combine(pathToSave, fileName);
 
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error when creating file: {ex}");
-            return null;
-        }
+        System.IO.File.Move(path, fullPath);
+
+        var result = await _fileRepository.CreateAsync(new FileDescriptor {
+            guid = guid,
+            isPublic = isPublic,
+            path = fullPath
+        });
+
+        return result;
     }
 
     public async Task<List<FileDescriptor>> GetFiles()
@@ -113,7 +104,22 @@ class FileService : IFileService
     public async Task RemoveFile(string id)
     {
         var file = await _fileRepository.GetAsync(id);
-        File.Delete(file!.path);
+        if (file is null)
+        {
+            _logger.LogWarning($"Trying to delete non-existent file with id {id}");
+            return;
+        }
+        var directory = Path.GetDirectoryName(file.path);
+        try
+        {
+            File.Delete(file.path);
+            Directory.Delete(directory!);
+        }
+        catch (IOException e)
+        {
+            _logger.LogError($"Error when trying to delete file {file.path} and its directory {directory!}: {e.ToString()}");
+            throw e;
+        }
         await _fileRepository.RemoveAsync(id);
     }
 }

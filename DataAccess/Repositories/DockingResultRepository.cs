@@ -47,7 +47,7 @@ public class DockingResultRepository : IDockingResultRepository
             .Lookup<DockingResultReceptorAffinityProjection, Receptor, DockingResultReceptorAffinityReceptorsProjection>(
                 _ReceptorCollection, x => x.receptorId, y => y.id, z => z.receptors)
             .Project<DockingResultReceptorAffinityReceptorsProjection, DockingResultDTO>(x =>
-                new DockingResultDTO { receptorFASTA = x.receptors.First().FASTA, UniProtId = x.receptors.First().UniProtID,
+                new DockingResultDTO { receptorFASTA = x.receptors.First().FASTA, UniProtId = x.receptors.First().UniProtID, receptorName = x.receptors.First().name,
                                        guid = x.guid, affinity = x.affinity, success = x.success })
             .ToListAsync<DockingResultDTO>();
         return DockingResults;

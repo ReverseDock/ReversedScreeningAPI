@@ -57,4 +57,11 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet]
+    [Route("receptors/updatenames")]
+    public async Task<ActionResult> TriggerUpdateReceptorNames()
+    {
+        await _receptorService.UpdateNames();
+        return Ok();
+    }
 }

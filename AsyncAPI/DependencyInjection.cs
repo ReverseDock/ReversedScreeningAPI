@@ -17,7 +17,6 @@ namespace Microsoft.Extensions.DependencyInjection
                 x.AddConsumer<DockingResultConsumer>();
                 x.AddConsumer<FASTAResultConsumer>();
                 x.AddConsumer<DockingPrepResultConsumer>();
-                x.AddConsumer<PDBFixResultConsumer>();
 
                 x.UsingRabbitMq((ctx, cfg) =>
                 {
@@ -29,7 +28,6 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddTransient<IDockingTaskPublisher, DockingTaskPublisher>();
             services.AddTransient<IFASTATaskPublisher, FASTATaskPublisher>();
             services.AddTransient<IDockingPrepTaskPublisher, DockingPrepTaskPublisher>();
-            services.AddTransient<IPDBFixTaskPublisher, PDBFixTaskPublisher>();
             services.AddTransient<IMailTaskPublisher, MailTaskPublisher>();
             
             return services;

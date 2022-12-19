@@ -15,7 +15,7 @@ public class DockingPrepService : IDockingPrepService
     
     public DockingPrepService(ILogger<DockingPrepService> logger, IConnectionMultiplexer redis,
                               IDockingPrepTaskPublisher dockingPrepTaskPublisher,
-                        IFileService fileService)
+                              IFileService fileService)
     {
         _logger = logger;
         _redis = redis;
@@ -25,6 +25,12 @@ public class DockingPrepService : IDockingPrepService
 
     public async Task PrepareForDocking(Receptor receptor)
     {
+        if (receptor.fileId == null) 
+        {
+            _logger.LogError($"Trying to prepare receptor without file! Receptor id: {receptor.id}");
+            return;
+        }
+
         var db = _redis.GetDatabase();
         var guid = Guid.NewGuid();
         var taskInfo = new DockingPrepTaskInfo
@@ -36,12 +42,19 @@ public class DockingPrepService : IDockingPrepService
         var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
         await db.StringSetAsync("DockingPrep:" + guid.ToString(), taskInfoJSON);
 
-        var file = await _fileService.GetFile(receptor.fileId!);
+        var file = await _fileService.GetFile(receptor.fileId);
+
+        if (file == null)
+        {
+            _logger.LogError($"Receptor file not found! Receptor id: {receptor.id}");
+            await db.StringGetDeleteAsync("DockingPrep:" + guid.ToString());
+            return;
+        }
 
         var task = new DockingPrepTask
         {
             id = guid,
-            path = file!.path,
+            path = file.path,
             type = EDockingPrepPeptideType.Receptor
         };
 
@@ -50,6 +63,12 @@ public class DockingPrepService : IDockingPrepService
 
     public async Task PrepareForDocking(Submission submission)
     {
+        if (submission.fileId == null) 
+        {
+            _logger.LogError($"Trying to prepare ligand without file! Submission id: {submission.guid}");
+            return;
+        }
+
         var db = _redis.GetDatabase();
         var guid = Guid.NewGuid();
         var taskInfo = new DockingPrepTaskInfo
@@ -61,7 +80,14 @@ public class DockingPrepService : IDockingPrepService
         var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
         await db.StringSetAsync("DockingPrep:" + guid.ToString(), taskInfoJSON);
 
-        var file = await _fileService.GetFile(submission!.fileId!);
+        var file = await _fileService.GetFile(submission.fileId);
+
+        if (file == null)
+        {
+            _logger.LogError($"Ligand file not found! Submission id: {submission.guid}");
+            await db.StringGetDeleteAsync("DockingPrep:" + guid.ToString());
+            return;
+        }
 
         var task = new DockingPrepTask
         {
