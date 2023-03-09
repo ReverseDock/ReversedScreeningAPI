@@ -256,4 +256,11 @@ public class SubmissionService : ISubmissionService
         var receptorsDTO = await _receptorService.GetReceptorDTOs(uniProtIds);
         return receptorsDTO;
     }
+
+    public async Task<IEnumerable<Receptor>> GetUnprocessedReceptors(Submission submission)
+    {
+        var uniProtIds = await GetUniProtIdsFromSubmission(submission);
+        var receptors = await _receptorService.GetReceptorsForUniProtIds(uniProtIds); 
+        return receptors.Where(x => x.status == ReceptorFileStatus.Unprocessed);
+    }
 }

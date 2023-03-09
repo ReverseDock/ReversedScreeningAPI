@@ -23,4 +23,6 @@ public interface ISubmissionService
     public Task<bool> CheckReceptorsCount(Submission submission);
     public Task<int> CalculateAndSetExhaustiveness(Submission submission);
     public Task<IEnumerable<ReceptorDTO>> GetReceptorDTOs(Submission submission);
+    public Task<IEnumerable<Receptor>> GetUnprocessedReceptors(Submission submission);
+    
 }

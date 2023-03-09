@@ -1,5 +1,5 @@
 using HttpAPI.Models;
-
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace DataAccess.Repositories;
@@ -60,7 +60,6 @@ public class ReceptorRepository : IReceptorRepository
 
     public async Task<List<Receptor>> GetReceptorsWithoutNames()
     {
-        var filter = Builders<Receptor>.Filter.Exists("name", false);
-        return await _ReceptorCollection.Find(filter).ToListAsync();
+        return await _ReceptorCollection.Find(x => x.name == null).ToListAsync();
     }
 }

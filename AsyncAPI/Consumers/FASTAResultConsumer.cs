@@ -75,8 +75,9 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
             await _receptorRepository.UpdateAsync(taskInfo.receptorId, receptor);
             return;
         }
+        receptor.status = ReceptorFileStatus.Unprocessed;
         await _receptorRepository.UpdateAsync(taskInfo.receptorId, receptor);
 
-        await _dockingPrepService.PrepareForDocking(receptor);
+        // await _dockingPrepService.PrepareForDocking(receptor);
     }
 }

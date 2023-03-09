@@ -90,7 +90,19 @@ public class SubmissionController : ControllerBase
         if (submission.status != Models.SubmissionStatus.ConfirmationPending) return Conflict();
 
         await _submissionService.ConfirmSubmission(submission);
-        await _dockingPrepService.PrepareForDocking(submission);
+        var unprocessed = await _submissionService.GetUnprocessedReceptors(submission);
+        if (!unprocessed.Any())
+        {
+            await _dockingPrepService.PrepareForDocking(submission);
+        }
+        else 
+        {
+            foreach (var receptor in unprocessed)
+            {
+                await _dockingPrepService.PrepareForDocking(submission, receptor);
+            }
+        }
+
         await _mailService.PublishConfirmedMail(submission);
         return Ok();
     }

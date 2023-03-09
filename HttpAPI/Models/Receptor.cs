@@ -25,6 +25,7 @@ public class Receptor
 public enum ReceptorFileStatus
 {
     TooBig,
+    Unprocessed,
     PDBQTError,
     Ready
 }

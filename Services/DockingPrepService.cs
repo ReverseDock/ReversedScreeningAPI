@@ -23,7 +23,7 @@ public class DockingPrepService : IDockingPrepService
         _fileService = fileService;
     }
 
-    public async Task PrepareForDocking(Receptor receptor)
+    public async Task PrepareForDocking(Submission submission, Receptor receptor)
     {
         if (receptor.fileId == null) 
         {
@@ -36,7 +36,8 @@ public class DockingPrepService : IDockingPrepService
         var taskInfo = new DockingPrepTaskInfo
         {
             type = EDockingPrepPeptideType.Receptor,
-            receptorId = receptor.id
+            receptorId = receptor.id,
+            submissionId = submission!.id
         };
 
         var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
