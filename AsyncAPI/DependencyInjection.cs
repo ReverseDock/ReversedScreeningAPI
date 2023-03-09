@@ -20,6 +20,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 x.UsingRabbitMq((ctx, cfg) =>
                 {
+                    cfg.ConcurrentMessageLimit = 1;
                     cfg.Host(host, "/");
                     cfg.ConfigureEndpoints(ctx);
                     cfg.UseRawJsonSerializer();
