@@ -1,6 +1,7 @@
 using HttpAPI.Models;
 using HttpAPI.Models.DTO;
 using AsyncAPI.Models;
+using MongoDB.Bson;
 
 using DataAccess.Repositories;
 using AsyncAPI.Publishers;
@@ -65,8 +66,25 @@ public class SubmissionService : ISubmissionService
                 configPath = receptorConfig.path,
                 exhaustiveness = submission.exhaustiveness
             };
+            var dbDockingResult = new HttpAPI.Models.DockingResult
+            {
+                guid = Guid.NewGuid(),
+                submissionId = submission.id!,
+                receptorId = receptor.id!,
+                affinity = 0,
+                outputFileId = BsonObjectId.Empty.ToString(),
+                secondsToCompletion = -1,
+                success = false
+            };
+            await _resultRepository.CreateAsync(dbDockingResult);
             await _dockingPublisher.PublishDockingTask(docking);
         }
+    }
+
+    public async Task<int> GetUnfinishedDockingsCount()
+    {
+        var dbDockingResults = await _resultRepository.GetAsync();
+        return dbDockingResults.Count(x => x.secondsToCompletion == -1);
     }
 
     public async Task<Submission> CreateSubmission(IFormFile ligandFile, string ipAddress)
@@ -176,7 +194,7 @@ public class SubmissionService : ISubmissionService
     public async Task<float> GetProgress(Submission submission)
     {
         var uniProtIds = await GetUniProtIdsFromSubmission(submission);
-        var results = await _resultRepository.GetBySubmissionId(submission.id!);
+        var results = (await _resultRepository.GetBySubmissionId(submission.id!)).Where(res => res.secondsToCompletion != -1);
         var receptors = await _receptorService.GetReceptorsForUniProtIds(uniProtIds);
         var numberOfOkayReceptors = receptors.Count(rec => rec.status == ReceptorFileStatus.Ready);
         if (numberOfOkayReceptors == 0) 

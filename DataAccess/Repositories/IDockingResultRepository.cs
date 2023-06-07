@@ -10,4 +10,6 @@ public interface IDockingResultRepository : IRepository<DockingResult>
     public Task<List<DockingResultDTO>> GetDTOAsync(string submissionId);
     
     public Task<DockingResult?> GetByGuid(Guid resultGuid);
+
+    public Task<DockingResult> GetBySubmissionIdAndReceptorId(string submissionId, string receptorId);
 }

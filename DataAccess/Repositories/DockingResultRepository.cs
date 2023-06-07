@@ -41,7 +41,7 @@ public class DockingResultRepository : IDockingResultRepository
     public async Task<List<DockingResultDTO>> GetDTOAsync(string submissionId)
     {
         var DockingResults = await _DockingResultCollection.Aggregate()
-            .Match<DockingResult>(x => x.submissionId == submissionId)
+            .Match<DockingResult>(x => x.submissionId == submissionId && x.secondsToCompletion != -1)
             .Project<DockingResult, DockingResultReceptorAffinityProjection>(x =>
                 new DockingResultReceptorAffinityProjection { receptorId = x.receptorId, affinity = x.affinity, guid = x.guid, success = x.success })
             .Lookup<DockingResultReceptorAffinityProjection, Receptor, DockingResultReceptorAffinityReceptorsProjection>(
@@ -51,6 +51,11 @@ public class DockingResultRepository : IDockingResultRepository
                                        guid = x.guid, affinity = x.affinity, success = x.success })
             .ToListAsync<DockingResultDTO>();
         return DockingResults;
+    }
+
+    public async Task<DockingResult> GetBySubmissionIdAndReceptorId(string submissionId, string receptorId)
+    {
+        return await _DockingResultCollection.Find(x => x.submissionId == submissionId && x.receptorId == receptorId).FirstOrDefaultAsync();
     }
 
     public async Task<DockingResult?> GetAsync(string id)

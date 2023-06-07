@@ -8,6 +8,7 @@ public interface ISubmissionService
     public Task<Submission> CreateSubmission(IFormFile ligandFile, string ipAddress);
     public Task ConfirmSubmission(Submission submission);
     public Task CreateDockings(Submission submission);
+    public Task<int> GetUnfinishedDockingsCount();
     public Task<List<DockingResultDTO>> GetResults(Submission submission);
     public Task<Submission?> GetSubmission(string submissionId);
     public Task<Submission?> GetSubmission(Guid submissionGuid);

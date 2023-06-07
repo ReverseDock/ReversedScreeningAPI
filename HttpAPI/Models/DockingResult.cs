@@ -8,16 +8,16 @@ public class DockingResult
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? id { get; set; }
-    public Guid guid { get; init; }
+    public Guid guid { get; set; }
     [BsonRepresentation(BsonType.ObjectId)]
-    public string submissionId { get; init; } = null!;
+    public string submissionId { get; set; } = null!;
     [BsonRepresentation(BsonType.ObjectId)]
-    public string receptorId { get; init; } = null!;
-    public float affinity { get; init; }
+    public string receptorId { get; set; } = null!;
+    public float affinity { get; set; }
     [BsonRepresentation(BsonType.ObjectId)]
-    public string outputFileId { get; init; } = null!;
-    public int secondsToCompletion { get; init; }
-    public bool success { get; init; }
+    public string outputFileId { get; set; } = null!;
+    public int secondsToCompletion { get; set; }
+    public bool success { get; set; }
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
 };

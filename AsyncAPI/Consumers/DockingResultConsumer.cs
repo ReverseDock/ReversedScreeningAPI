@@ -50,17 +50,18 @@ public class DockingResultConsumer : IConsumer<AsyncAPI.Models.DockingResult>
             await _submissionRepository.UpdateAsync(submission.id!, submission);
         }
 
-        var dbDockingResult = new HttpAPI.Models.DockingResult
+        var dbDockingResult = await _DockingResultsRepository.GetBySubmissionIdAndReceptorId(model.submission, model.receptor);
+        if (dbDockingResult is null)
         {
-            guid = Guid.NewGuid(),
-            submissionId = model.submission,
-            receptorId = model.receptor,
-            affinity = model.affinity,
-            outputFileId = outputFile?.id!,
-            secondsToCompletion = model.secondsToCompletion,
-            success = model.success
-        };
-        await _DockingResultsRepository.CreateAsync(dbDockingResult);
+            _logger.LogError($"Could not find DockingResult for message. Submission: {model.submission}, Receptor: {model.receptor}");
+            return;
+        }
+    
+        dbDockingResult.affinity = model.affinity;
+        dbDockingResult.outputFileId = outputFile?.id!;
+        dbDockingResult.secondsToCompletion = model.secondsToCompletion != -1 ? model.secondsToCompletion : 0;
+        dbDockingResult.success = model.success;
+        await _DockingResultsRepository.UpdateAsync(dbDockingResult.id!, dbDockingResult);
 
         var progress = await _submissionService.GetProgress(submission);
         if (progress == 1.0)

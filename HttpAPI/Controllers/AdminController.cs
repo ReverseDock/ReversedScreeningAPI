@@ -6,6 +6,7 @@ namespace HttpAPI.Controllers;
 
 [ApiController]
 [Route("admin")]
+[Host("localhost")]
 public class AdminController : ControllerBase
 {
     private readonly ILogger<AdminController> _logger;
@@ -32,7 +33,7 @@ public class AdminController : ControllerBase
 
     [HttpPost]
     [Route("receptors")]
-    public async Task<ActionResult> CreateReceptorFile(IFormFile formFile, [FromForm] string UniProtId) 
+    public async Task<ActionResult> CreateReceptorFile(IFormFile formFile, [FromForm] string UniProtId)
     {
         if (formFile.Length == 0) return BadRequest();
         var receptor = await _receptorService.CreateReceptor(formFile, UniProtId);

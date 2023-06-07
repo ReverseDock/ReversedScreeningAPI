@@ -33,6 +33,13 @@ public class SubmissionController : ControllerBase
         _mailService = mailService;
     }
 
+    [HttpGet]
+    [Route("status")]
+    public async Task<ActionResult> GetQueueStatus()
+    {
+        return Ok(await _submissionService.GetUnfinishedDockingsCount());
+    }
+
     [HttpPost]
     public async Task<ActionResult> CreateSubmission(IFormFile ligandFile)
     {
