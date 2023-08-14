@@ -9,18 +9,16 @@ namespace Services;
 class FileService : IFileService
 {
     private readonly ILogger<FileService> _logger;
-    private readonly IFileRepository _fileRepository;
     private readonly IConfiguration _configuration;
     
-    public FileService(ILogger<FileService> logger, IFileRepository fileRepository,
+    public FileService(ILogger<FileService> logger,
                            IConfiguration configuarion)
     {
         _logger = logger;
-        _fileRepository = fileRepository;
         _configuration = configuarion;
     }
 
-    public async Task<FileDescriptor> CreateFile(IFormFile formFile, string directory, bool isPublic = false)
+    public FileDescriptor CreateFile(IFormFile formFile, string directory, bool isPublic = false)
     {
         var guid = Guid.NewGuid();
         var file = formFile;
@@ -35,16 +33,14 @@ class FileService : IFileService
             file.CopyTo(stream);
         }
 
-        var result = await _fileRepository.CreateAsync(new FileDescriptor {
+        return new FileDescriptor {
             guid = guid,
             isPublic = isPublic,
             path = fullPath
-        });
-
-        return result;
+        };
     }
 
-    public async Task<FileDescriptor> CreateFile(string path, string directory, bool isPublic = false)
+    public FileDescriptor CreateFile(string path, string directory, bool isPublic = false)
     {
         var guid = Guid.NewGuid();
         var pathToSave = Path.Combine(_configuration.GetSection("Storage")["Files"], directory, guid.ToString());
@@ -55,71 +51,32 @@ class FileService : IFileService
 
         System.IO.File.Move(path, fullPath);
 
-        var result = await _fileRepository.CreateAsync(new FileDescriptor {
+        return new FileDescriptor {
             guid = guid,
             isPublic = isPublic,
             path = fullPath
-        });
-
-        return result;
+        };
     }
 
-    public async Task<List<FileDescriptor>> GetFiles()
+    public FileStream? GetFileStream(FileDescriptor fileDescriptor)
     {
-        return await _fileRepository.GetAsync();
-    }
-
-    public async Task<FileStream?> GetFileStream(Guid guid)
-    {
-        var fileObject = await _fileRepository.GetByGuid(guid);
-
-        if (fileObject == null) return null;
-
-        var fileStream = new FileStream(fileObject.path, FileMode.Open);
+        var fileStream = new FileStream(fileDescriptor.path, FileMode.Open);
         
         return fileStream;
     }
 
-    public async Task<FileStream?> GetFileStream(string id)
+    public void RemoveFile(FileDescriptor fileDescriptor)
     {
-        var fileObject = await _fileRepository.GetAsync(id);
-
-        if (fileObject == null) return null;
-
-        var fileStream = new FileStream(fileObject.path, FileMode.Open);
-        
-        return fileStream;
-    }
-
-    public async Task<FileDescriptor?> GetFile(string id)
-    {
-        return await _fileRepository.GetAsync(id);
-    }
-
-    public async Task<FileDescriptor?> GetFileByGuid(Guid guid)
-    {
-        return await _fileRepository.GetByGuid(guid);
-    }
-
-    public async Task RemoveFile(string id)
-    {
-        var file = await _fileRepository.GetAsync(id);
-        if (file is null)
-        {
-            _logger.LogWarning($"Trying to delete non-existent file with id {id}");
-            return;
-        }
-        var directory = Path.GetDirectoryName(file.path);
+        var directory = Path.GetDirectoryName(fileDescriptor.path);
         try
         {
-            File.Delete(file.path);
+            File.Delete(fileDescriptor.path);
             Directory.Delete(directory!);
         }
         catch (IOException e)
         {
-            _logger.LogError($"Error when trying to delete file {file.path} and its directory {directory!}: {e.ToString()}");
+            _logger.LogError($"Error when trying to delete file {fileDescriptor.path} and its directory {directory!}: {e.ToString()}");
             throw e;
         }
-        await _fileRepository.RemoveAsync(id);
     }
 }

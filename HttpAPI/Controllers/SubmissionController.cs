@@ -12,23 +12,22 @@ public class SubmissionController : ControllerBase
     private readonly ILogger<SubmissionController> _logger;
     private readonly ISubmissionService _submissionService;
     private readonly IDockingPrepService _dockingPrepService;
-    private readonly IReceptorService _receptorService;
     private readonly IFileService _fileService;
-    private readonly IMailService _mailService;
+    private readonly IFASTAService _fastaService;
     private readonly IConfiguration _configuration;
-
+    private readonly IMailService _mailService;
 
     public SubmissionController(ILogger<SubmissionController> logger,
                                 ISubmissionService submissionService,
                                 IDockingPrepService dockingPrepService,
-                                IFileService fileService, IReceptorService receptorService,
+                                IFileService fileService, IFASTAService fastaService,
                                 IConfiguration configuration, IMailService mailService)
     {
         _logger = logger;
         _submissionService = submissionService;
         _dockingPrepService = dockingPrepService;
         _fileService = fileService;
-        _receptorService = receptorService;
+        _fastaService = fastaService;
         _configuration = configuration;
         _mailService = mailService;
     }
@@ -50,24 +49,20 @@ public class SubmissionController : ControllerBase
 
     [HttpPost]
     [Route("{submissionGuid}/receptors")]
-    public async Task<ActionResult> AddReceptors(Guid submissionGuid, IFormFile receptorsFile)
+    public async Task<ActionResult> AddReceptors(Guid submissionGuid, IFormFileCollection receptorsFiles)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
+
         if (submission is null) return NotFound();
         if (submission.status >= Models.SubmissionStatus.Confirmed) return BadRequest("Can't change receptors, submission already confirmed.");
 
-        var file = await _submissionService.AddReceptors(submission, receptorsFile);
-        if (file is null) return BadRequest("File could not be parsed.");
-    
-        submission = await _submissionService.GetSubmission(submissionGuid);
-        var receptorsCountCheckResult = await _submissionService.CheckReceptorsCount(submission!);
         var maxReceptors = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorAmount"]);
-        if (!receptorsCountCheckResult) return BadRequest($"Too many receptors provided. Maximum is {maxReceptors}.");
+        if (receptorsFiles.Count > maxReceptors) return BadRequest($"Only {maxReceptors} PDB files allowed.");
+        if (receptorsFiles.Count == 0) return BadRequest("No PDB files provided.");
 
-        var exhaustiveness = await _submissionService.CalculateAndSetExhaustiveness(submission!);
-        var receptorsDTO = await _submissionService.GetReceptorDTOs(submission!);
-        var result = new ReceptorStatusDTO { exhaustiveness = exhaustiveness, receptors = receptorsDTO };
-        return Ok(result);
+        await _submissionService.AddReceptors(submission, receptorsFiles);
+
+        return Ok();
     }
 
     [HttpPost]
@@ -75,6 +70,7 @@ public class SubmissionController : ControllerBase
     public async Task<ActionResult> CreateConfirmation(Guid submissionGuid, [FromForm] string? emailAddress)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
+
         if (submission is null) return NotFound();
         if (emailAddress is not null)
         {
@@ -83,7 +79,7 @@ public class SubmissionController : ControllerBase
         } 
 
         await _submissionService.UpdateSubmission(submission);
-        // await _mailService.PublishConfirmationMail(submission);
+
         return Ok(submission.confirmationGuid);
     }
 
@@ -92,25 +88,20 @@ public class SubmissionController : ControllerBase
     public async Task<ActionResult> ConfirmSubmission(Guid submissionGuid, Guid confirmationGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
+
         if (submission is null) return NotFound();
         if (submission.confirmationGuid != confirmationGuid) return BadRequest("Wrong confirmation Guid provided.");
         if (submission.status != Models.SubmissionStatus.ConfirmationPending) return Conflict();
 
         await _submissionService.ConfirmSubmission(submission);
-        var unprocessed = await _submissionService.GetUnprocessedReceptors(submission);
-        if (!unprocessed.Any())
+
+        foreach (var receptor in submission.receptors)
         {
-            await _dockingPrepService.PrepareForDocking(submission);
-        }
-        else 
-        {
-            foreach (var receptor in unprocessed)
-            {
-                await _dockingPrepService.PrepareForDocking(submission, receptor);
-            }
+            await _fastaService.PublishFASTATask(submission, receptor);
         }
 
         await _mailService.PublishConfirmedMail(submission);
+
         return Ok();
     }
 
@@ -119,20 +110,15 @@ public class SubmissionController : ControllerBase
     public async Task<ActionResult> GetInfo(Guid submissionGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
-        if (submission is null) return NotFound();
 
-        var ligandFile = await _fileService.GetFile(submission.fileId!);
-        if (ligandFile is null) return Conflict();
-        var receptorList = await _fileService.GetFile(submission.receptorListFileId!);
-        if (receptorList is null) return Conflict();
-        var submissionTime = submission.createdAt!;
+        if (submission is null) return NotFound();
 
         var submissionInfo = new SubmissionInfoDTO
         {
-            ligandFileName = Path.GetFileNameWithoutExtension(ligandFile.path),
-            receptorListFilename = Path.GetFileNameWithoutExtension(receptorList.path), 
-            submissionTime = submissionTime.Value.ToUniversalTime().ToString("dd.MM.yyyy HH:mm:ss \"UTC\"")
+            ligandFileName = Path.GetFileNameWithoutExtension(submission.ligand.path),
+            submissionTime = submission.createdAt!.Value.ToUniversalTime().ToString("dd.MM.yyyy HH:mm:ss \"UTC\"")
         };
+
         return Ok(submissionInfo);
     }
 
@@ -141,9 +127,11 @@ public class SubmissionController : ControllerBase
     public async Task<ActionResult> GetStatus(Guid submissionGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
+
         if (submission is null) return NotFound();
 
         var status = await _submissionService.GetStatus(submission);
+
         return Ok(status);
     }
 
@@ -152,9 +140,11 @@ public class SubmissionController : ControllerBase
     public async Task<ActionResult> GetProgress(Guid submissionGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
+
         if (submission is null) return NotFound();
 
-        var progress = await _submissionService.GetProgress(submission);
+        var progress = _submissionService.GetProgress(submission);
+
         return Ok(progress);
     }
 
@@ -163,35 +153,61 @@ public class SubmissionController : ControllerBase
     public async Task<ActionResult> GetResults(Guid submissionGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
+
         if (submission is null) return NotFound();
 
-        var results = await _submissionService.GetResults(submission);
+        var results = _submissionService.GetResults(submission);
         var dto = new SubmissionResultsDTO
         {
             dockingResults = results
         };
+        
         return Ok(dto);
     }
 
     [HttpGet]
-    [Route("{submissionGuid}/results/{resultGuid}")]
-    public async Task<IActionResult> GetResultFile(Guid submissionGuid, Guid resultGuid)
+    [Route("{submissionGuid}/receptors/{resultGuid}/modes")]
+    public async Task<IActionResult> GetBindingModes(Guid submissionGuid, Guid resultGuid)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
         if (submission is null) return NotFound("Submission not found.");
-        var result = await _submissionService.GetResult(submission, resultGuid);
+        var result = submission.receptors.FirstOrDefault(r => r.guid == resultGuid);
         if (result is null) return NotFound("Result not found.");
 
-        var receptor = await _receptorService.GetReceptor(result.receptorId);
-        if (receptor is null) return Conflict();
-
-        var file = await _submissionService.GetResultFile(submission, resultGuid);
-        if (file is null) return Conflict();
-
-        var fileStream = await _fileService.GetFileStream(file!.id!);
+        var fileStream = _fileService.GetFileStream(result.outputFile!);
         if (fileStream is null) return Conflict();
 
-        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(file.path));
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(result.outputFile!.path));
+    }
+
+    [HttpGet]
+    [Route("{submissionGuid}/receptors/{resultGuid}/pdbqt")]
+    public async Task<IActionResult> GetReceptorFilePDBQT(Guid submissionGuid, Guid resultGuid)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        if (submission is null) return NotFound("Submission not found.");
+        var result = submission.receptors.FirstOrDefault(r => r.guid == resultGuid);
+        if (result is null) return NotFound("Result not found.");
+
+        var fileStream = _fileService.GetFileStream(result.pdbqtFile!);
+        if (fileStream is null) return Conflict();
+
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(result.pdbqtFile!.path));
+    }
+
+    [HttpGet]
+    [Route("{submissionGuid}/receptors/{resultGuid}/pdb")]
+    public async Task<IActionResult> GetReceptorFilePDB(Guid submissionGuid, Guid resultGuid)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+        if (submission is null) return NotFound("Submission not found.");
+        var result = submission.receptors.FirstOrDefault(r => r.guid == resultGuid);
+        if (result is null) return NotFound("Result not found.");
+
+        var fileStream = _fileService.GetFileStream(result.file!);
+        if (fileStream is null) return Conflict();
+
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(result.file!.path));
     }
 
     [Route("{submissionGuid}/ligand")]
@@ -201,32 +217,13 @@ public class SubmissionController : ControllerBase
         var submission = await _submissionService.GetSubmission(submissionGuid);
         if (submission is null) return NotFound();
 
-        var file = await _fileService.GetFile(submission.fileId!);
-        if (file is null) return Conflict();
-
-        var fileStream = await _fileService.GetFileStream(submission.fileId!);
+        var fileStream = _fileService.GetFileStream(submission.ligand!);
         if (fileStream is null) return Conflict();
 
-        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(file.path));
+        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(submission.ligand!.path));
     }
 
-    [Route("{submissionGuid}/receptors")]
-    [HttpGet]
-    public async Task<IActionResult> GetReceptorsFile(Guid submissionGuid)
-    {
-        var submission = await _submissionService.GetSubmission(submissionGuid);
-        if (submission is null) return NotFound();
-
-        var file = await _fileService.GetFile(submission.receptorListFileId!);
-        if (file is null) return Conflict();
-
-        var fileStream = await _fileService.GetFileStream(submission.receptorListFileId!);
-        if (fileStream is null) return Conflict();
-
-        return File(fileStream, "application/octet-stream", fileDownloadName: Path.GetFileName(file.path));
-    }
-
-    private bool CheckEmailAddress(string emailAddress)
+    private static bool CheckEmailAddress(string emailAddress)
     {
         // Thank you "imjosh", https://stackoverflow.com/a/16403290
         var trimmedEmail = emailAddress.Trim();

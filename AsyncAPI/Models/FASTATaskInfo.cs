@@ -2,5 +2,6 @@ namespace AsyncAPI.Models;
 
 public record FASTATaskInfo
 {
-    public string receptorId { get; init; }
+    public string submissionId { get; init; }
+    public Guid receptorGuid { get; init; }
 }

@@ -7,7 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IFileService, FileService>();
-builder.Services.AddScoped<IReceptorService, ReceptorService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IFASTAService, FASTAService>();
 builder.Services.AddScoped<IDockingPrepService, DockingPrepService>();

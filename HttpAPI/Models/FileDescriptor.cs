@@ -5,9 +5,6 @@ namespace HttpAPI.Models;
 
 public class FileDescriptor
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string? id { get; set; }
     public Guid guid { get; set; }
     public string path { get; set; } = null!;
     public bool isPublic { get; set; } = false;

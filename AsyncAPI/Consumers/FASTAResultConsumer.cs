@@ -16,7 +16,6 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
 {
     private readonly ILogger<FASTAResultConsumer> _logger;
     private readonly ISubmissionRepository _submissionRepository;
-    private readonly IReceptorRepository _receptorRepository;
     private readonly IConnectionMultiplexer _redis;
     private readonly IConfiguration _configuration;
     private readonly IDockingPrepService _dockingPrepService;
@@ -24,14 +23,12 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
 
     public FASTAResultConsumer(ILogger<FASTAResultConsumer> logger,
                                ISubmissionRepository submissionRepository,
-                               IReceptorRepository receptorRepository,
                                IConnectionMultiplexer redis, IConfiguration configuration,
                                IDockingPrepService dockingPrepService,
                                IFileService fileService)
     {
         _logger = logger;
         _submissionRepository = submissionRepository;
-        _receptorRepository = receptorRepository;
         _redis = redis;
         _configuration = configuration;
         _dockingPrepService = dockingPrepService;
@@ -51,16 +48,23 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
         }
     
         FASTATaskInfo? taskInfo = JsonSerializer.Deserialize<FASTATaskInfo>(taskInfoRaw.ToString());
-                if (taskInfo is null)
+        if (taskInfo is null)
         {
             _logger.LogError($"Could not deserialize FASTATaskInfo for {model.id}. Raw: {taskInfoRaw.ToString()}");
             return;
         }
 
-        var receptor = await _receptorRepository.GetAsync(taskInfo.receptorId);
+        var submission = await _submissionRepository.GetAsync(taskInfo.submissionId);
+        if (submission is null)
+        {
+            _logger.LogError($"Could not find submission of FASTATask. Submission: {taskInfo.submissionId}");
+            return;
+        }
+
+        var receptor = submission.receptors.FirstOrDefault(r => r.guid == taskInfo.receptorGuid);
         if (receptor is null)
         {
-            _logger.LogError($"Could not find receptor of FASTATask. Receptor: {taskInfo.receptorId}");
+            _logger.LogError($"Could not find receptor of FASTATask. Receptor: {taskInfo.receptorGuid}");
             return;
         }
 
@@ -70,14 +74,13 @@ public class FASTAResultConsumer : IConsumer<FASTAResult>
         if (model.FASTA.Length > maxSize)
         {
             receptor.status = ReceptorFileStatus.TooBig;
-            await _fileService.RemoveFile(receptor.fileId!);
-            receptor.fileId = null;
-            await _receptorRepository.UpdateAsync(taskInfo.receptorId, receptor);
+            receptor.affinity = -1;
+            _fileService.RemoveFile(receptor.file!);
+            receptor.file = null;
+            await _submissionRepository.UpdateReceptor(submission, receptor);
             return;
         }
-        receptor.status = ReceptorFileStatus.Unprocessed;
-        await _receptorRepository.UpdateAsync(taskInfo.receptorId, receptor);
 
-        // await _dockingPrepService.PrepareForDocking(receptor);
+        await _dockingPrepService.PrepareForDocking(submission, receptor);
     }
 }

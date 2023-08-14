@@ -4,7 +4,7 @@ public record DockingTask
 {
     public string submissionId { get; init; } = null!;
 
-    public string receptorId { get; init; } = null!;
+    public Guid receptorId { get; init; }
 
     public string ligandPath { get; init; } = null!;
 
