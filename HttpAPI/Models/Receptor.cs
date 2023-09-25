@@ -1,6 +1,3 @@
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
-
 namespace HttpAPI.Models;
 
 public class Receptor
@@ -16,6 +13,7 @@ public class Receptor
     public FileDescriptor? pdbqtFile { get; set; }
     public FileDescriptor? configFile { get; set; }
     public FileDescriptor? outputFile { get; set; }
+    public bool alphaFold { get; set; } = false;
     public DateTime? updatedAt = null;
     public DateTime? createdAt = null;
 }

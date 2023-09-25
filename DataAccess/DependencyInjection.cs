@@ -23,6 +23,7 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             services.AddSingleton<ISubmissionRepository, SubmissionRepository>();
+            services.AddSingleton<IAlphaFoldReceptorRepository, AlphaFoldReceptorRepository>();
 
             return services;
         }

@@ -26,6 +26,7 @@ public class FASTAService : IFASTAService
         var guid = Guid.NewGuid();
         var taskInfo = new FASTATaskInfo
         {
+            type = FASTATaskType.UserPDB,
             submissionId = submission.id!,
             receptorGuid = receptor.guid!
         };
@@ -34,6 +35,30 @@ public class FASTAService : IFASTAService
         await db.StringSetAsync("FASTA:" + guid.ToString(), taskInfoJSON);
 
         var file = receptor.file;
+
+        var task = new FASTATask
+        {
+            id = guid,
+            path = file!.path
+        };
+
+        await _fastaTaskPublisher.PublishFASTATask(task);
+    }
+
+    public async Task PublishFASTATask(AlphaFoldReceptor alphaFoldReceptor)
+    {
+        var db = _redis.GetDatabase();
+        var guid = Guid.NewGuid();
+        var taskInfo = new FASTATaskInfo
+        {
+            type = FASTATaskType.AlphaFold,
+            UnitProtID = alphaFoldReceptor.UniProtID
+        };
+
+        var taskInfoJSON = JsonSerializer.Serialize(taskInfo);
+        await db.StringSetAsync("FASTA:" + guid.ToString(), taskInfoJSON);
+
+        var file = alphaFoldReceptor.file;
 
         var task = new FASTATask
         {

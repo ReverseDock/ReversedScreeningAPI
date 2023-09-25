@@ -11,6 +11,7 @@ builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IFASTAService, FASTAService>();
 builder.Services.AddScoped<IDockingPrepService, DockingPrepService>();
 builder.Services.AddScoped<IMailService, MailService>();
+builder.Services.AddScoped<IAlphaFoldReceptorService, AlphaFoldReceptorService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

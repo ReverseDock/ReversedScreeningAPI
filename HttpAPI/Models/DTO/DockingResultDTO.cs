@@ -8,4 +8,5 @@ public class DockingResultDTO
     public float affinity { get; init; }
     public bool success { get; init; }
     public HttpAPI.Models.ReceptorFileStatus status { get; init; }
+    public bool AlphaFold { get; init; }
 };

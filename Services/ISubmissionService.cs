@@ -13,6 +13,7 @@ public interface ISubmissionService
     public Task<Submission?> GetSubmission(string submissionId);
     public Task<Submission?> GetSubmission(Guid submissionGuid);
     public Task AddReceptors(Submission submission, IFormFileCollection files);
+    public Task<IEnumerable<AlphaFoldReceptorDTO>> AddReceptors(Submission submission, IEnumerable<string> uniProtIds);
     public Task<FileDescriptor?> GetResultFile(Submission submission, Guid resultGuid);
     public Task<List<Submission>> GetSubmissions();
     public Task UpdateSubmission(Submission submission);

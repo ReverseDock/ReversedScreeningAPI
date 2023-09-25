@@ -14,16 +14,19 @@ public class SubmissionService : ISubmissionService
 {
     private readonly ILogger<SubmissionService> _logger;
     private readonly ISubmissionRepository _submissionRepository;
+    private readonly IAlphaFoldReceptorRepository _alphaFoldReceptorRepository;
     private readonly IDockingTaskPublisher _dockingPublisher;
     private readonly IFileService _fileService;
     private readonly IConfiguration _configuration;
 
     public SubmissionService(ILogger<SubmissionService> logger, ISubmissionRepository submissionRepository,
+                             IAlphaFoldReceptorRepository alphaFoldReceptorRepository,
                              IDockingTaskPublisher dockingPublisher, IFileService fileService,
                              IConfiguration configuration)
     {
         _logger = logger;
         _submissionRepository = submissionRepository;
+        _alphaFoldReceptorRepository = alphaFoldReceptorRepository;
         _dockingPublisher = dockingPublisher;
         _fileService = fileService;
         _configuration = configuration;
@@ -115,7 +118,8 @@ public class SubmissionService : ISubmissionService
                 status = ReceptorFileStatus.Unprocessed,
                 file = fileDescriptor,
                 guid = Guid.NewGuid(), 
-                secondsToCompletion = -1
+                secondsToCompletion = -1,
+                alphaFold = false
             });
 
         }
@@ -123,6 +127,48 @@ public class SubmissionService : ISubmissionService
         submission.receptors = receptors;
         submission.status = SubmissionStatus.ConfirmationPending;
         await _submissionRepository.UpdateAsync(submission.id!, submission);
+    }
+
+    public async Task<IEnumerable<AlphaFoldReceptorDTO>> AddReceptors(Submission submission, IEnumerable<string> uniProtIds)
+    {
+        var receptors = new List<Receptor>();
+
+        var maxLength = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorSize"]);
+
+        var DTOs = new List<AlphaFoldReceptorDTO>();
+
+        foreach (var uniProtId in uniProtIds)
+        {
+            _logger.LogInformation($"Adding receptor {uniProtId} to submission {submission.id}");
+            var receptor = await _alphaFoldReceptorRepository.GetByUnitProtID(uniProtId);
+            if (receptor is null) {
+                DTOs.Add(new AlphaFoldReceptorDTO 
+                {
+                    UniProtId = uniProtId,
+                    status = "Not found"
+                });
+                continue;
+            }
+            receptors.Add(new Receptor
+            {
+                name = uniProtId,
+                status = receptor.FASTA.Length > maxLength ? ReceptorFileStatus.TooBig : ReceptorFileStatus.Unprocessed,
+                file = receptor.file,
+                guid = Guid.NewGuid(),
+                secondsToCompletion = -1,
+                alphaFold = true
+            });
+            DTOs.Add(new AlphaFoldReceptorDTO
+            {
+                UniProtId = uniProtId,
+                status = receptor.FASTA.Length > maxLength ? "Too long" : "Okay"
+            });
+        }
+
+        submission.receptors = receptors;
+        submission.status = SubmissionStatus.ConfirmationPending;
+        await _submissionRepository.UpdateAsync(submission.id!, submission);
+        return DTOs;
     }
 
     public List<DockingResultDTO> GetResults(Submission submission)
@@ -137,7 +183,8 @@ public class SubmissionService : ISubmissionService
                 receptorName = receptor.name,
                 affinity = receptor.affinity,
                 success = receptor.success,
-                status = receptor.status
+                status = receptor.status,
+                AlphaFold = receptor.alphaFold
             };
             results.Add(receptorResult);
         }

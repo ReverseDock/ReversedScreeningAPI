@@ -66,6 +66,24 @@ public class SubmissionController : ControllerBase
     }
 
     [HttpPost]
+    [Route("{submissionGuid}/receptors/uniprot")]
+    public async Task<ActionResult<IEnumerable<AlphaFoldReceptorDTO>>> AddReceptorsUniProtIds([FromRoute] Guid submissionGuid, [FromBody] string[] uniProtIds)
+    {
+        var submission = await _submissionService.GetSubmission(submissionGuid);
+
+        if (submission is null) return NotFound();
+        if (submission.status >= Models.SubmissionStatus.Confirmed) return BadRequest("Can't change receptors, submission already confirmed.");
+
+        var maxReceptors = int.Parse(_configuration.GetSection("Limitations")["MaxReceptorAmount"]);
+        if (uniProtIds.Length > maxReceptors) return BadRequest($"Only {maxReceptors} UniProt Ids allowed.");
+        if (uniProtIds.Length == 0) return BadRequest("No UniProt Ids provided.");
+
+        var dtos = await _submissionService.AddReceptors(submission, uniProtIds);
+
+        return Ok(dtos);
+    }
+
+    [HttpPost]
     [Route("{submissionGuid}/confirm")]
     public async Task<ActionResult> CreateConfirmation(Guid submissionGuid, [FromForm] string? emailAddress)
     {
@@ -97,7 +115,10 @@ public class SubmissionController : ControllerBase
 
         foreach (var receptor in submission.receptors)
         {
-            await _fastaService.PublishFASTATask(submission, receptor);
+            if (!receptor.alphaFold)
+                await _fastaService.PublishFASTATask(submission, receptor);
+            else if (receptor.status != Models.ReceptorFileStatus.TooBig)
+                await _dockingPrepService.PrepareForDocking(submission, receptor);
         }
 
         await _mailService.PublishConfirmedMail(submission);
