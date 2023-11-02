@@ -42,16 +42,6 @@ public class AdminController : ControllerBase
         return Ok();
     }
 
-/*
-    [HttpGet]
-    [Route("receptors")]
-    public async Task<ActionResult> GetReceptors()
-    {
-        var result = await _receptorService.GetReceptors();
-        return Ok(result);
-    }
-*/
-
     [HttpGet]
     [Route("submissions")]
     public async Task<ActionResult> GetSubmissions()

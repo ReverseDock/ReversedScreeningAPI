@@ -49,6 +49,7 @@ public class SubmissionController : ControllerBase
 
     [HttpPost]
     [Route("{submissionGuid}/receptors")]
+    [RequestSizeLimit(268_435_456)] // 256 MB limit
     public async Task<ActionResult> AddReceptors(Guid submissionGuid, IFormFileCollection receptorsFiles)
     {
         var submission = await _submissionService.GetSubmission(submissionGuid);
