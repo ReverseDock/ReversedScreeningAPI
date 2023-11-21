@@ -75,8 +75,7 @@ class FileService : IFileService
         }
         catch (IOException e)
         {
-            _logger.LogError($"Error when trying to delete file {fileDescriptor.path} and its directory {directory!}: {e.ToString()}");
-            throw e;
+            _logger.LogWarning($"Error when trying to delete file {fileDescriptor.path} and its directory {directory!}: {e.ToString()}");
         }
     }
 }
